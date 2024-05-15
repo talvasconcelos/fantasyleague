@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 
 
-class Example(BaseModel):
+class fantasyleague(BaseModel):
     id: str
     wallet: str

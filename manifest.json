@@ -1,9 +1,9 @@
 {
   "repos": [
     {
-      "id": "example",
+      "id": "fantasyleague",
       "organisation": "lnbits",
-      "repository": "example"
+      "repository": "fantasyleague"
     }
   ]
 }

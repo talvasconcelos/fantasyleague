@@ -5,23 +5,23 @@ from fastapi import APIRouter, Depends
 from fastapi.exceptions import HTTPException
 from lnbits.decorators import WalletTypeInfo, get_key_type
 
-from .models import Example
+from .models import fantasyleague
 
 # views_api.py is for you API endpoints that could be hit by another service
 
-example_ext_api = APIRouter(
+fantasyleague_ext_api = APIRouter(
     prefix="/api/v1",
-    tags=["example"],
+    tags=["fantasyleague"],
 )
 
 
-@example_ext_api.get("/test/{example_data}", description="Example API endpoint")
-async def api_example(example_data: str) -> Example:
+@fantasyleague_ext_api.get("/test/{fantasyleague_data}", description="fantasyleague API endpoint")
+async def api_fantasyleague(fantasyleague_data: str) -> fantasyleague:
     # Do some python things and return the data
-    return Example(id="1", wallet=example_data)
+    return fantasyleague(id="1", wallet=fantasyleague_data)
 
 
-@example_ext_api.get("/vetted", description="Get the vetted extension readme")
+@fantasyleague_ext_api.get("/vetted", description="Get the vetted extension readme")
 async def api_get_vetted(wallet: WalletTypeInfo = Depends(get_key_type)):
     try:
         async with httpx.AsyncClient() as client:
