@@ -14,6 +14,7 @@ from .crud import (
     update_player_points,
 )
 from .helpers import calculate_player_points
+from .services import pay_rewards_overall
 
 
 class FantasyLeagueScheduler:
@@ -93,16 +94,9 @@ class FantasyLeagueScheduler:
             winners = sorted(participants, key=lambda x: x.total_points, reverse=True)[
                 :3
             ]
-
-            return
-        # check what competition type it is, check what stage it's in and distribute prizes accordingly
-        if league_type == "CUP":
-            calculate_rewards(participants, league_type, "matchday")
-        elif league_type == "LEAGUE":
-            # distribute prizes for head to head league
-            pass
+            await pay_rewards_overall(self.league.id, winners)
         else:
-            logger.error("Unknown competition type.")
+            logger.info("League still running.")
 
     async def stop(self):
         self.running = False

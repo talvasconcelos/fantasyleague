@@ -13,6 +13,7 @@ from .models import (
     Players,
     Settings,
     CreatePrizeDistribution,
+    PrizeDistribution,
 )
 
 ## SETTINGS
@@ -262,3 +263,11 @@ async def create_prize_distribution(data: CreatePrizeDistribution):
         (data.league_id, data.participant_id, data.prize_type, data.prize_amount),
     )
     return
+
+
+async def get_prize_distributions(league_id: str):
+    rows = await db.fetchall(
+        "SELECT * FROM fantasyleague.prize_distributions WHERE league_id = ?",
+        (league_id,),
+    )
+    return [PrizeDistribution(**row) for row in rows]

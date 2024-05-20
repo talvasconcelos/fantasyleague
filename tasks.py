@@ -18,4 +18,7 @@ async def on_invoice_paid(payment: Payment) -> None:
     if (
         payment.extra.get("tag") == "fantasyleague"
     ):  # Will grab any payment with the tag "fantasyleague"
-        logger.debug(payment)
+        if payment.extra.get("reward"):
+            logger.debug("Reward payment received")
+            return
+        pass
