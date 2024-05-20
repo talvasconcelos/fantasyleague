@@ -2,7 +2,7 @@
 
 ## 1. Acceptance of Terms
 
-By installing and using the LNbits extension ("Extension"), you agree to be bound by these terms and conditions ("Terms"). If you do not agree to these Terms, do not use the Extension.
+By installing and using the LNbits extension ("Fantasy League"), you agree to be bound by these terms and conditions ("Terms"). If you do not agree to these Terms, do not use the Extension.
 
 ## 2. License
 

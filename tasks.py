@@ -1,7 +1,3 @@
-# tasks.py is for asynchronous when invoices get paid
-
-# add your dependencies here
-
 import asyncio
 
 from lnbits.core.models import Payment

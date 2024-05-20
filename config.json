@@ -1,18 +1,13 @@
 {
-  "name": "Build your own!",
-  "short_description": "Extension building guide",
+  "name": "Fantasy League",
+  "short_description": "Football Fantasy League",
   "tile": "https://raw.githubusercontent.com/lnbits/fantasyleague/main/static/bitcoin-extension.png",
   "min_lnbits_version": "0.12.6",
   "donate": "donate@legend.lnbits.com",
   "contributors": [
     {
-      "name": "Ben Arc",
-      "uri": "mailto:ben@lnbits.com",
-      "role": "Developer"
-    },
-    {
-      "name": "DNI",
-      "uri": "https://github.com/dni",
+      "name": "Tiago Vasconcelos",
+      "uri": "mailto:talvasconcelos@lnbits.com",
       "role": "Developer"
     }
   ],
