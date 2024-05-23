@@ -1,22 +1,15 @@
 async def m001_initial(db):
     await db.execute(
         """
-        CREATE TABLE fantasyleague.settings (
-            api_key TEXT NOT NULL,
-            first_prize FLOAT NOT NULL,
-            second_prize FLOAT NOT NULL,
-            third_prize FLOAT NOT NULL,
-            weekly_prize FLOAT,
-            monthly_prize FLOAT,
-            matchday_prize FLOAT,
-            finals_prize FLOAT,
+        CREATE TABLE fantasyleague.api_settings (
+            api_key TEXT NOT NULL PRIMARY KEY
         );
         """
     )
 
     await db.execute(
         f"""
-        CREATE TABLE fantasyleague.fantasyleague (
+        CREATE TABLE fantasyleague.competitions (
             id TEXT PRIMARY KEY,
             wallet TEXT NOT NULL,
             name TEXT NOT NULL,
@@ -24,11 +17,17 @@ async def m001_initial(db):
             buy_in INTEGER NOT NULL,
             competition_type TEXT NOT NULL,
             competition_code TEXT NOT NULL,
+            competition_logo TEXT,
             matchday INTEGER DEFAULT 1,
             season_start TEXT NOT NULL,
             season_end TEXT NOT NULL,
-            budget INTEGER DEFAULT 1000000,
             has_ended BOOLEAN DEFAULT FALSE,
+            fee FLOAT NOT NULL DEFAULT 0.0,
+            num_participants INTEGER DEFAULT 0,
+            first_place FLOAT NOT NULL,
+            second_place FLOAT NOT NULL,
+            third_place FLOAT NOT NULL,
+            matchday_winner FLOAT NOT NULL,
             last_updated TIMESTAMP NOT NULL DEFAULT {db.timestamp_now}
         );
         """
@@ -48,41 +47,25 @@ async def m001_initial(db):
     )
 
     await db.execute(
-        f"""
+        """
         CREATE TABLE fantasyleague.players (
             id TEXT PRIMARY KEY,
             league_id TEXT,
             api_id INTEGER NOT NULL,
             name TEXT NOT NULL,
             position TEXT NOT NULL,
-            price REAL DEFAULT 0.0,
             team TEXT NOT NULL,
-            points INTEGER DEFAULT 0,
-            FOREIGN KEY (league_id) REFERENCES {db.references_schema}fantasyleague(id),
+            points INTEGER DEFAULT 0
         );
         """
     )
 
     await db.execute(
-        f"""
+        """
         CREATE TABLE fantasyleague.participant_players (
             participant_id TEXT,
             player_id TEXT,
-            FOREIGN KEY (participant_id) REFERENCES {db.references_schema}participants(id),
-            FOREIGN KEY (player_id) REFERENCES {db.references_schema}players(id),
             PRIMARY KEY (participant_id, player_id)
-        );
-        """
-    )
-
-    await db.execute(
-        f"""
-        CREATE TABLE fantasyleague.gameweeks (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            gameweek INTEGER NOT NULL,
-            player_id TEXT,
-            points INTEGER NOT NULL,
-            FOREIGN KEY (player_id) REFERENCES {db.references_schema}players(id)
         );
         """
     )
@@ -95,9 +78,7 @@ async def m001_initial(db):
             participant_id TEXT,
             prize_type TEXT,
             prize_amount INTEGER,
-            distributed_at TIMESTAMP NOT NULL DEFAULT {db.timestamp_now},
-            FOREIGN KEY (league_id) REFERENCES {db.references_schema}fantasyleague(id),
-            FOREIGN KEY (participant_id) {db.references_schema}REFERENCES participants(id)
+            distributed_at TIMESTAMP NOT NULL DEFAULT {db.timestamp_now}
         );
         """
     )

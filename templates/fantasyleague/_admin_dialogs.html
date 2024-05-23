@@ -1,0 +1,161 @@
+<q-dialog
+  v-model="competitionDialog.show"
+  position="top"
+  @hide="closeCompetitionDialog"
+>
+  <q-card class="q-pa-lg q-pt-xl" style="width: 500px">
+    <q-form @submit="submitCompetition" class="q-gutter-md">
+      <q-select
+        filled
+        dense
+        emit-value
+        v-model="competitionDialog.data.competition_code"
+        :options="competitionOptions"
+        label="Competition *"
+      >
+        <template v-slot:option="scope">
+          <q-item v-bind="scope.itemProps" v-on="scope.itemEvents">
+            <q-item-section avatar>
+              <q-avatar rounded color="white">
+                <img :src="scope.opt.image" />
+              </q-avatar>
+            </q-item-section>
+            <q-item-section>
+              <q-item-label
+                v-text="`${scope.opt.area} - ${scope.opt.value}`"
+              ></q-item-label>
+              <q-item-label caption v-text="scope.opt.label"></q-item-label>
+            </q-item-section>
+            <q-item-section side top>
+              <q-item-label
+                caption
+                v-text="`Start: ${scope.opt.startDate}`"
+              ></q-item-label>
+              <q-item-label
+                caption
+                v-text="`End: ${scope.opt.endDate}`"
+              ></q-item-label>
+            </q-item-section>
+          </q-item>
+        </template>
+      </q-select>
+      <q-select
+        filled
+        dense
+        emit-value
+        v-model="competitionDialog.data.wallet"
+        :options="g.user.walletOptions"
+        label="Wallet *"
+      >
+      </q-select>
+      <q-input
+        filled
+        dense
+        v-model.trim="competitionDialog.data.name"
+        label="Name *"
+        hint="A display name for the competition"
+      ></q-input>
+      <q-input
+        filled
+        dense
+        v-model.trim="competitionDialog.data.description"
+        label="Description"
+        hint="A small description for the competition"
+      ></q-input>
+      <q-input
+        filled
+        dense
+        v-model.number="competitionDialog.data.buy_in"
+        label="Buy-in *"
+        hint="The amount of sats to join the competition"
+      ></q-input>
+      <q-input
+        filled
+        dense
+        v-model.number="competitionDialog.data.fee"
+        label="Service Fee"
+        hint="Optional fee to be charged per entry"
+      ></q-input>
+      <q-list>
+        <q-expansion-item
+          expand-separator
+          label="Prizes"
+          caption="Set the prize distribution for the competition"
+        >
+          <q-card>
+            <q-card-section>
+              By default, the prize distribution is set to:
+              <ul>
+                <li>First Prize: 50%</li>
+                <li>Second Prize: 30%</li>
+                <li>Third Prize: 20%</li>
+                <li>Matchday Prize: 10%</li>
+              </ul>
+              Entries will close 1 hour before the first match of the
+              competition.
+            </q-card-section>
+            <q-card-section class="q-gutter-md">
+              <q-input
+                filled
+                dense
+                v-model.number="competitionDialog.data.first_place"
+                type="number"
+                label="1st Place Prize % (default 50%)"
+                step="0.01"
+                min="0"
+                max="100"
+                hint="Percentage of the total pot to be awarded to the first place"
+              ></q-input>
+              <q-input
+                filled
+                dense
+                v-model.number="competitionDialog.data.second_place"
+                type="number"
+                label="2nd Place Prize % (default 30%)"
+                step="0.01"
+                min="0"
+                max="100"
+                hint="Percentage of the total pot to be awarded to the second place"
+              ></q-input>
+              <q-input
+                filled
+                dense
+                v-model.number="competitionDialog.data.third_place"
+                type="number"
+                label="3rd Prize % (default 20%)"
+                step="0.01"
+                min="0"
+                max="100"
+                hint="Percentage of the total pot to be awarded to the third place"
+              ></q-input>
+              <q-input
+                filled
+                dense
+                v-model.number="competitionDialog.data.matchday_winner"
+                type="number"
+                label="Prize per Matchday % (default 10%)"
+                step="0.01"
+                min="0"
+                max="100"
+                hint="Percentage of the total pot to be awarded to the top team of the matchday"
+              ></q-input>
+            </q-card-section>
+          </q-card>
+        </q-expansion-item>
+      </q-list>
+      <div class="row q-mt-lg">
+        <q-btn unelevated color="primary" type="submit"
+          >Create Competition</q-btn
+        >
+        <q-btn
+          v-close-popup
+          flat
+          color="grey"
+          class="q-ml-auto"
+          @click="closeCompetitionDialog"
+          >Cancel</q-btn
+        >
+      </div>
+    </q-form>
+  </q-card>
+</q-dialog>

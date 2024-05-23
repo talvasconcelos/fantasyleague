@@ -3,34 +3,41 @@ from http import HTTPStatus
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.exceptions import HTTPException
 from lnbits.core.crud import get_user
-from lnbits.decorators import WalletTypeInfo, get_key_type, require_admin_key
+from lnbits.core.services import create_invoice
+from lnbits.core.views.api import api_payment
+from lnbits.decorators import WalletTypeInfo, require_admin_key, check_admin
+from loguru import logger
 
-from . import football_data
+from .api_football import get_players as get_players_api
 from .crud import (
     create_league,
     create_participant,
     create_players_bulk,
     create_prize_distribution,
+    create_settings,
     get_active_leagues,
     get_league,
     get_leagues,
     get_participants,
+    get_participant_by_wallet,
     get_player,
     get_players,
     get_players_by_league,
     get_prize_distributions,
+    get_settings,
     update_league,
-    create_settings,
+    update_settings,
 )
 from .models import (
     CreateFantasyLeague,
     CreateParticipant,
     FantasyLeague,
     Participant,
-    Settings,
+    CreatePlayer,
+    PlayersBulk,
     Player,
     PrizeDistribution,
-    UpdateFantasyLeague,
+    Settings,
 )
 
 fantasyleague_ext_api = APIRouter(
@@ -39,10 +46,20 @@ fantasyleague_ext_api = APIRouter(
 )
 
 
+@fantasyleague_ext_api.get(
+    "/settings",
+    description="Get Fantasy League settings",
+    dependencies=[Depends(check_admin)],
+)
+async def api_get_settings(wallet: WalletTypeInfo = Depends(require_admin_key)):
+    settings = await get_settings()
+    return settings.dict() if settings else None
+
+
 @fantasyleague_ext_api.post(
-    "/fantasyleague/settings",
-    response_model=FantasyLeague,
-    description="Create Fantasy League setings",
+    "/settings",
+    response_model=Settings,
+    description="Create Fantasy League settings",
     status_code=HTTPStatus.CREATED,
 )
 async def api_create_settings(
@@ -52,8 +69,24 @@ async def api_create_settings(
     return settings.dict()
 
 
-@fantasyleague_ext_api.get("/fantasyleague", description="fantasyleague API endpoint")
-async def api_fantasyleague(
+@fantasyleague_ext_api.put(
+    "/settings",
+    response_model=Settings,
+    description="Update Fantasy League settings",
+    dependencies=[Depends(check_admin)],
+)
+async def api_update_settings(
+    data: Settings, wallet: WalletTypeInfo = Depends(require_admin_key)
+):
+    settings = await update_settings(data)
+    return settings.dict()
+
+
+## COMPETITIONS
+
+
+@fantasyleague_ext_api.get("/competition", description="Get all Fantasy Leagues")
+async def api_get_leagues(
     all_wallets: bool = Query(False),
     wallet: WalletTypeInfo = Depends(require_admin_key),
 ):
@@ -64,27 +97,35 @@ async def api_fantasyleague(
     return [league.dict() for league in await get_leagues(wallet_ids)]
 
 
+@fantasyleague_ext_api.get(
+    "/competitions/available", description="Get available competitions"
+)
+async def api_get_active_leagues():
+    return [league.dict() for league in await get_active_leagues()]
+
+
 @fantasyleague_ext_api.post(
-    "/fantasyleague",
+    "/competition",
     response_model=FantasyLeague,
     description="Create a new Fantasy League",
     status_code=HTTPStatus.CREATED,
+    dependencies=[Depends(check_admin)],
 )
-async def api_create_fantasyleague(
+async def api_create_league(
     data: CreateFantasyLeague, wallet: WalletTypeInfo = Depends(require_admin_key)
 ):
-    # check if a league is already running
-    if await get_active_leagues():
-        raise HTTPException(
-            status_code=HTTPStatus.BAD_REQUEST,
-            detail="A league is already running. You can only have one active league at a time.",
-        )
+    api_key = await get_settings()
+    assert api_key, "Please add your API key first."
     try:
         league = await create_league(data)
         assert league
-        # populate DB for the competition
-        players = await football_data.get_players(league.id)
-        await create_players_bulk(players)
+        players = [
+            CreatePlayer(**player)
+            for player in await get_players_api(
+                api_key.api_key, league.id, competition_code=league.competition_code
+            )
+        ]
+        await create_players_bulk(PlayersBulk(players=players))
         return league.dict()
     except Exception as e:
         raise HTTPException(
@@ -93,11 +134,12 @@ async def api_create_fantasyleague(
 
 
 @fantasyleague_ext_api.patch(
-    "/fantasyleague/{league_id}",
+    "/competition/{league_id}",
     response_model=FantasyLeague,
     description="Update a Fantasy League",
+    dependencies=[Depends(check_admin)],
 )
-async def api_update_fantasyleague(
+async def api_update_league(
     league_id: str,
     data: CreateFantasyLeague,
     wallet: WalletTypeInfo = Depends(require_admin_key),
@@ -115,7 +157,7 @@ async def api_update_fantasyleague(
 
 
 @fantasyleague_ext_api.get(
-    "/fantasyleague/{league_id}/participants",
+    "/participants/{league_id}",
     description="Get all participants in a league",
 )
 async def api_get_participants(league_id: str):
@@ -123,35 +165,78 @@ async def api_get_participants(league_id: str):
 
 
 @fantasyleague_ext_api.post(
-    "/fantasyleague/{league_id}/participant",
-    response_model=Participant,
+    "/participants/join",
     description="Create a new participant in a league",
 )
-async def api_create_participant(data: CreateParticipant):
+async def api_create_participant(
+    data: CreateParticipant,
+    wallet: WalletTypeInfo = Depends(require_admin_key),
+):
+    # Check if league exists
+    league = await get_league(data.fantasyleague_id)
+    if not league:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND, detail="Fantasy League not found."
+        )
+    # Check if participant already exists
+    participant = await get_participant_by_wallet(data.wallet, data.fantasyleague_id)
+    if participant:
+        raise HTTPException(
+            status_code=HTTPStatus.CONFLICT,
+            detail="Participant already exists in this league.",
+        )
+    extra = {
+        "tag": "fantasyleague",
+        "id": data.fantasyleague_id,
+        "wallet": data.wallet,
+        "name": data.name,
+    }
     try:
-        participant = await create_participant(data)
-        assert participant
-        return participant.dict()
+        payment_hash, payment_request = await create_invoice(
+            wallet_id=data.wallet,
+            amount=league.buy_in,  # type: ignore
+            memo=f"Join Competition: {league.name}",
+            extra=extra,
+        )
+        # participant = await create_participant(data)
+        # assert participant
+        # return participant.dict()
     except Exception as e:
         raise HTTPException(
             status_code=HTTPStatus.BAD_REQUEST,
             detail=f"Error creating participant: {e}",
         ) from None
 
+    return {"payment_hash": payment_hash, "payment_request": payment_request}
+
+
+@fantasyleague_ext_api.get("/participants/join/{league_id}/{payment_hash}")
+async def api_check_participant_payment(league_id: str, payment_hash: str):
+    league = await get_league(league_id)
+    if not league:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND, detail="Fantasy League not found."
+        )
+    try:
+        status = await api_payment(payment_hash)
+
+    except Exception as exc:
+        logger.error(exc)
+        return {"paid": False}
+    return status
+
 
 ## PLAYERS
 
 
 @fantasyleague_ext_api.get(
-    "/fantasyleague/{league_id}/players", description="Get all players in a league"
+    "/competition/{league_id}/players", description="Get all players in a league"
 )
 async def api_get_league_players(league_id: str):
     return [player.dict() for player in await get_players_by_league(league_id)]
 
 
-@fantasyleague_ext_api.get(
-    "/fantasyleague/players/{player_id}", description="Get a specific player"
-)
+@fantasyleague_ext_api.get("/players/{player_id}", description="Get a specific player")
 async def api_get_player(player_id: str):
     player = await get_player(player_id)
     if not player:

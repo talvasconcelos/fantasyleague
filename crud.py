@@ -7,42 +7,43 @@ from . import db
 from .models import (
     CreateFantasyLeague,
     CreateParticipant,
+    CreatePrizeDistribution,
     FantasyLeague,
     Participant,
     Player,
     Players,
-    Settings,
-    CreatePrizeDistribution,
+    PlayersBulk,
     PrizeDistribution,
+    Settings,
 )
 
 ## SETTINGS
 
 
 async def get_settings() -> Optional[Settings]:
-    row = await db.fetchone("SELECT * FROM fantasyleague.settings")
+    row = await db.fetchone("SELECT * FROM fantasyleague.api_settings")
     return Settings(**row) if row else None
 
 
 async def create_settings(data: Settings) -> Settings:
     await db.execute(
         """
-        INSERT INTO fantasyleague.settings (api_key, first_prize, second_prize, third_prize, weekly_prize, monthly_prize, matchday_prize, finals_prize)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO fantasyleague.api_settings (api_key)
+        VALUES (?)
         """,
-        (
-            data.api_key,
-            data.first_prize,
-            data.second_prize,
-            data.third_prize,
-            data.weekly_prize,
-            data.monthly_prize,
-            data.matchday_prize,
-            data.finals_prize,
-        ),
+        (data.api_key,),
     )
     settings = await get_settings()
     assert settings, "Newly created settings couldn't be retrieved"
+    return settings
+
+
+async def update_settings(data: Settings) -> Settings:
+    await db.execute(
+        "UPDATE fantasyleague.api_settings SET api_key = ?", (data.api_key,)
+    )
+    settings = await get_settings()
+    assert settings, "Newly updated settings couldn't be retrieved"
     return settings
 
 
@@ -55,7 +56,7 @@ async def get_leagues(wallet_ids: Union[str, List[str]]) -> List[FantasyLeague]:
 
     q = ",".join(["?"] * len(wallet_ids))
     rows = await db.fetchall(
-        f"SELECT * FROM fantasyleague.fantasyleague WHERE wallet IN ({q})",
+        f"SELECT * FROM fantasyleague.competitions WHERE wallet IN ({q})",
         (*wallet_ids,),
     )
     return [FantasyLeague(**row) for row in rows]
@@ -63,38 +64,45 @@ async def get_leagues(wallet_ids: Union[str, List[str]]) -> List[FantasyLeague]:
 
 async def get_league(league_id: str) -> Optional[FantasyLeague]:
     row = await db.fetchone(
-        "SELECT * FROM fantasyleague.fantasyleague WHERE id = ?", (league_id,)
+        "SELECT * FROM fantasyleague.competitions WHERE id = ?", (league_id,)
     )
     return FantasyLeague(**row) if row else None
 
 
 async def get_active_leagues():
-    # get all active leagues from DB and count, if count is 0, return None
-    active = await db.execute(
-        "SELECT COUNT(id) FROM fantasyleague.fantasyleague WHERE has_ended = 1"
+    rows = await db.fetchall(
+        "SELECT * FROM fantasyleague.competitions WHERE has_ended = 0"
     )
-    if active == 0:
-        return None
-    return active
+    return [FantasyLeague(**row) for row in rows]
 
 
 async def create_league(data: CreateFantasyLeague) -> FantasyLeague:
     league_id = urlsafe_short_hash()
     await db.execute(
         """
-        INSERT INTO fantasyleague.fantasyleague (id, wallet, name, description, buy_in, competition_type, competition_code, season_start, season_end)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO fantasyleague.competitions (
+            id, wallet, name, description, competition_type, competition_code, competition_logo,
+            season_start, season_end, buy_in, fee, first_place, second_place,
+            third_place, matchday_winner
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             league_id,
             data.wallet,
             data.name,
             data.description,
-            data.buy_in,
             data.competition_type,
             data.competition_code,
+            data.competition_logo,
             data.season_start,
             data.season_end,
+            data.buy_in,
+            data.fee,
+            data.first_place,
+            data.second_place,
+            data.third_place,
+            data.matchday_winner,
         ),
     )
     league = await get_league(league_id)
@@ -105,11 +113,11 @@ async def create_league(data: CreateFantasyLeague) -> FantasyLeague:
 async def update_league(league_id: str, **kwargs) -> FantasyLeague:
     q = ", ".join([f"{field[0]} = ?" for field in kwargs.items()])
     await db.execute(
-        f"UPDATE fantasyleague.fantasyleague SET {q} WHERE id = ?",
+        f"UPDATE fantasyleague.competitions SET {q} WHERE id = ?",
         (*kwargs.values(), league_id),
     )
     row = await db.fetchone(
-        "SELECT * FROM fantasyleague.fantasyleague WHERE id = ?", (league_id,)
+        "SELECT * FROM fantasyleague.competitions WHERE id = ?", (league_id,)
     )
     assert row, "Newly updated league couldn't be retrieved"
     return FantasyLeague(**row)
@@ -129,6 +137,16 @@ async def get_participants(league_id: str) -> List[Participant]:
 async def get_all_participants() -> List[Participant]:
     rows = await db.fetchall("SELECT * FROM fantasyleague.participants")
     return [Participant(**row) for row in rows]
+
+
+async def get_participant_by_wallet(
+    wallet: str, league_id: str
+) -> Optional[Participant]:
+    row = await db.fetchone(
+        "SELECT * FROM fantasyleague.participants WHERE wallet = ? AND fantasyleague_id = ?",
+        (wallet, league_id),
+    )
+    return Participant(**row) if row else None
 
 
 async def get_participant(participant_id: str) -> Optional[Participant]:
@@ -184,12 +202,12 @@ async def update_participant_points(participant_id: str, points: int):
 
 
 ## PLAYERS
-async def create_players_bulk(data: Players):
+async def create_players_bulk(data: PlayersBulk):
     await db.execute(
         """
         INSERT INTO fantasyleague.players (id, league_id, api_id, name, position, team)
         VALUES
-        (?, ?, ?, ?, ?)
+        (?, ?, ?, ?, ?, ?)
         """,
         tuple(
             (

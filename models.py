@@ -4,13 +4,6 @@ from typing import Optional
 
 class Settings(BaseModel):
     api_key: str
-    first_prize: float
-    second_prize: float
-    third_prize: float
-    weekly_prize: Optional[float]
-    monthly_prize: Optional[float]
-    matchday_prize: Optional[float]
-    finals_prize: Optional[float]
 
 
 class CreateFantasyLeague(BaseModel):
@@ -19,17 +12,28 @@ class CreateFantasyLeague(BaseModel):
     description: Optional[str]
     competition_type: str
     competition_code: str
+    competition_logo: Optional[str]
     season_start: str
     season_end: str
     buy_in: int
-    budget: Optional[int]
+    fee: Optional[float] = 0.0
+    first_place: Optional[float] = 0.5
+    second_place: Optional[float] = 0.3
+    third_place: Optional[float] = 0.2
+    matchday_winner: Optional[float] = 0.1
 
 
 class FantasyLeague(CreateFantasyLeague):
     id: str
     matchday: int
+    num_participants: int
     has_ended: bool
     last_updated: int
+
+    # add a property to get the total prize pool
+    @property
+    def total_prize_pool(self) -> float:
+        return self.buy_in * self.num_participants
 
 
 class CreateParticipant(BaseModel):
@@ -45,6 +49,7 @@ class Participant(CreateParticipant):
 
 
 class CreatePlayer(BaseModel):
+    id: Optional[str]
     api_id: int
     league_id: str
     name: str
@@ -53,9 +58,11 @@ class CreatePlayer(BaseModel):
 
 
 class Player(CreatePlayer):
-    id: str
-    price: float
     points: int
+
+
+class PlayersBulk(BaseModel):
+    players: list[CreatePlayer]
 
 
 class Players(BaseModel):

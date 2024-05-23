@@ -3,11 +3,12 @@ from datetime import datetime, timedelta, timezone
 
 from loguru import logger
 
-from . import football_data
+from .api_football import get_matches
 from .crud import (
-    get_league,
-    get_participants,
+    get_active_leagues,
+    get_settings,
     get_participant_team,
+    get_participants,
     get_participants_by_players,
     update_league,
     update_participant_points,
@@ -15,51 +16,59 @@ from .crud import (
 )
 from .helpers import calculate_player_points
 from .services import pay_rewards_overall
+from .models import FantasyLeague
 
 
 class FantasyLeagueScheduler:
     def __init__(self, interval_hours=12):
-        self.interval_hours = interval_hours
+        self.interval_hours = 1  # interval_hours
+        self.now = datetime.now(timezone.utc)
         self.next_run_time = self.now + timedelta(hours=self.interval_hours)
         self.running = False
 
     async def run_forever(self):
+        logger.debug("FantasyLeagueScheduler started.")
         self.running = True
         while self.running:
             try:
                 self.now = datetime.now(timezone.utc)
+                logger.debug(f"Will run: {self.now >= self.next_run_time}")
                 if self.now >= self.next_run_time:
                     self.next_run_time = self.now + timedelta(hours=self.interval_hours)
                     await self.collect_and_process_data()
-                await asyncio.sleep(60 * 60 * 4)  # Check every 4 hours
+                await asyncio.sleep(60 * 5)  # Testing
+                # await asyncio.sleep(60 * 60 * 4)  # Check every 4 hours
             except Exception as ex:
                 logger.warning(ex)
                 await asyncio.sleep(60)  # Wait a bit before retrying
 
-    async def collect_and_process_data(self, league_id=None):
-        if not league_id:
+    async def collect_and_process_data(self):
+        api_key = await get_settings()
+        if not api_key:
+            logger.error("API key not set.")
             return
-        logger.info("Collecting data and processing...")
-        self.league = await get_league(league_id)
-        if not self.league:
-            logger.error("League not found.")
-            return
-        matches = await self.fetch_data(
-            competition=self.league.competition_code, matchday=self.league.matchday
-        )
-        if matches is None:
-            logger.info("Not all matches played yet.")
-            return
+        self.api_key = api_key.api_key
+        leagues = await get_active_leagues()
+        logger.debug(f"Active leagues: {leagues}")
+        for league in leagues:
+            logger.info("Collecting data and processing...")
+            matches = await self.fetch_data(
+                competition=league.competition_code, matchday=league.matchday
+            )
+            logger.debug(f"Matches: {matches}")
+            if matches is None:
+                logger.info("Not all matches played yet.")
+                return
 
-        points = await self.calculate_points(matches)
-        player_ids = list(points.keys())
-        await self.update_participants_total_points(player_ids)
-        await self.check_competitions()
+            points = await self.calculate_points(matches)
+            player_ids = list(points.keys())
+            await self.update_participants_total_points(player_ids)
+            await self.check_competitions(league)
 
     async def fetch_data(self, competition, matchday=1):
         # Replace with actual function to fetch data from the API
         logger.info("Fetching data from API...")
-        return await football_data.get_matches(competition, matchday)
+        return await get_matches(self.api_key, competition, matchday)
 
     async def calculate_points(self, matches):
         # Replace with actual function to calculate player points
@@ -79,22 +88,21 @@ class FantasyLeagueScheduler:
             total_points = sum([player.points for player in participant_team])
             await update_participant_points(participant.id, points=total_points)
 
-    async def check_competitions(self):
+    async def check_competitions(self, league: FantasyLeague):
         # Replace with actual function to check if competitions are over and distribute prizes
         logger.info("Checking competitions and distributing prizes...")
-        assert self.league
-        participants = await get_participants(self.league.id)
-        league_type = self.league.competition_type
+        participants = await get_participants(league.id)
+        league_type = league.competition_type
 
-        if self.league.season_end < self.now.strftime("%Y-%m-%d"):
+        if league.season_end < self.now.strftime("%Y-%m-%d"):
             # league has ended
-            await update_league(self.league.id, has_ended=True)
+            await update_league(league.id, has_ended=True)
             logger.info("League has ended.")
             # distribute prizes
             winners = sorted(participants, key=lambda x: x.total_points, reverse=True)[
                 :3
             ]
-            await pay_rewards_overall(self.league.id, winners)
+            await pay_rewards_overall(league.id, winners)
         else:
             logger.info("League still running.")
 

@@ -1,79 +1,82 @@
-import httpx
-import asyncio
 import datetime
-from typing import Optional
-from .models import CreatePlayer, Players
+
+import httpx
+
+from loguru import logger
 
 BASE_URL = "https://api.football-data.org/v4/"
 
 
-class FootballData:
-    def __init__(self):
-        self.api_key: Optional[str] = None
-        self.headers = {
-            "X-Auth-Token": self.api_key,
-            "Content-Type": "application/json",
-        }
-        self.client = httpx.AsyncClient(base_url=BASE_URL, headers=self.headers)
+def _get_headers(api_key: str):
+    return {
+        "X-Auth-Token": api_key,
+        "Content-Type": "application/json",
+    }
 
-    def _add_api_key(self, key):
-        self.api_key = key
-        self.headers["X-Auth-Token"] = self.api_key
 
-    async def get_competitions(self):
+async def get_competitions():
+    client = httpx.AsyncClient(base_url=BASE_URL)
+
+    try:
+        response = await client.get("competitions")
+        r = response.json()
+        today = datetime.date.today()
+
         eligible_competitions = []
+        for competition in r["competitions"]:
+            if competition["plan"] != "TIER_ONE":
+                continue
+            end_date = datetime.datetime.strptime(
+                competition["currentSeason"]["endDate"], "%Y-%m-%d"
+            ).date()
+            if today < end_date:
+                eligible_competitions.append(competition)
 
-        try:
-            response = await self.client.get("competitions")
-            r = response.json()
-            today = datetime.date.today()
+        return eligible_competitions
+    except httpx.HTTPStatusError as exc:
+        return exc.response.json()
 
-            for competition in r["competitions"]:
-                if competition["plan"] != "TIER_ONE":
-                    continue
-                end_date = datetime.datetime.strptime(
-                    competition["currentSeason"]["endDate"], "%Y-%m-%d"
-                ).date()
-                if today < end_date:
-                    eligible_competitions.append(competition)
 
-            return eligible_competitions
-        except httpx.HTTPStatusError as exc:
-            return exc.response.json()
+async def get_teams(api_key: str, competition_code: str):
+    client = httpx.AsyncClient(base_url=BASE_URL, headers=_get_headers(api_key))
 
-    async def _get_teams(self, competition_code):
-        try:
-            response = await self.client.get(f"competitions/{competition_code}/teams")
-            return response.json()["teams"]
-        except httpx.HTTPStatusError as exc:
-            return exc.response.json()
+    try:
+        response = await client.get(f"competitions/{competition_code}/teams")
+        return response.json()["teams"]
+    except httpx.HTTPStatusError as exc:
+        return exc.response.json()
 
-    async def get_players(self, league_id) -> Players:
-        teams = await self._get_teams(competition_code="PL")
-        players = []
-        for team in teams:
-            squad = team["squad"]
-            for player in squad:
-                players.append(
-                    CreatePlayer(
-                        api_id=player["id"],
-                        league_id=league_id,
-                        name=player["name"],
-                        position=player["position"],
-                        team=team["name"],
-                    )
-                )
-        return Players(players=players)
 
-    async def get_matches(self, competition_code: str, matchday: int):
-        try:
-            response = await self.client.get(
-                f"competitions/{competition_code}/matches?matchday={matchday}"
+async def get_players(api_key: str, league_id: str, competition_code: str):
+    teams = await get_teams(api_key, competition_code)
+    players = []
+    for team in teams:
+        squad = team["squad"]
+        for player in squad:
+            players.append(
+                {
+                    "api_id": player["id"],
+                    "league_id": league_id,
+                    "name": player["name"],
+                    "position": player["position"],
+                    "team": team["name"],
+                }
             )
-            r = response.json()
-            all_matches_played = r["resultSet"]["count"] == r["resultSet"]["played"]
-            if not all_matches_played:
-                return None
-            return r["matches"]
-        except httpx.HTTPStatusError as exc:
-            return exc.response.json()
+    return players
+
+
+async def get_matches(api_key: str, competition_code: str, matchday: int):
+    client = httpx.AsyncClient(base_url=BASE_URL, headers=_get_headers(api_key))
+
+    try:
+        response = await client.get(
+            f"competitions/{competition_code}/matches?matchday={matchday}"
+        )
+        r = response.json()
+        # logger.debug(r)
+        all_matches_played = r["resultSet"]["count"] == r["resultSet"]["played"]
+        if not all_matches_played:
+            return None
+        return r["matches"]
+    except httpx.HTTPStatusError as exc:
+        return exc.response.json()

@@ -618,5 +618,5 @@ data = [
     }
 ]
 
-points = calculate_player_points(data)
-print(points)
+# points = calculate_player_points(data)
+# print(points)
