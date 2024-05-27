@@ -40,6 +40,7 @@ async def m001_initial(db):
             fantasyleague_id TEXT NOT NULL,
             wallet TEXT NOT NULL,
             name TEXT NOT NULL,
+            formation TEXT DEFAULT '4-4-2',
             total_points INTEGER DEFAULT 0,
             join_date TIMESTAMP NOT NULL DEFAULT {db.timestamp_now}
         );

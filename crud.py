@@ -82,10 +82,10 @@ async def create_league(data: CreateFantasyLeague) -> FantasyLeague:
         """
         INSERT INTO fantasyleague.competitions (
             id, wallet, name, description, competition_type, competition_code, competition_logo,
-            season_start, season_end, buy_in, fee, first_place, second_place,
+            season_start, season_end, matchday, buy_in, fee, first_place, second_place,
             third_place, matchday_winner
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             league_id,
@@ -97,6 +97,7 @@ async def create_league(data: CreateFantasyLeague) -> FantasyLeague:
             data.competition_logo,
             data.season_start,
             data.season_end,
+            data.matchday,
             data.buy_in,
             data.fee,
             data.first_place,
@@ -156,6 +157,15 @@ async def get_participant(participant_id: str) -> Optional[Participant]:
     return Participant(**row) if row else None
 
 
+async def get_participant_competitions(wallet_ids: List[str]):
+    q = ",".join(["?"] * len(wallet_ids))
+    rows = await db.fetchall(
+        f"SELECT * FROM fantasyleague.participants WHERE wallet IN ({q})",
+        (*wallet_ids,),
+    )
+    return [Participant(**row) for row in rows]
+
+
 async def create_participant(data: CreateParticipant) -> Participant:
     participant_id = urlsafe_short_hash()
     await db.execute(
@@ -193,10 +203,30 @@ async def get_participants_by_players(player_ids: List[int]) -> List[Participant
     return [Participant(**row) for row in rows]
 
 
+async def update_participant_formation(participant_id: str, formation: str):
+    await db.execute(
+        "UPDATE fantasyleague.participants SET formation = ? WHERE id = ?",
+        (formation, participant_id),
+    )
+    return
+
+
 async def update_participant_points(participant_id: str, points: int):
     await db.execute(
         "UPDATE fantasyleague.participants SET total_points = ? WHERE id = ?",
         (points, participant_id),
+    )
+    return
+
+
+async def create_participant_team(participant_id: str, player_ids: List[str]):
+    await db.execute(
+        """
+        INSERT INTO fantasyleague.participant_players (participant_id, player_id)
+        VALUES
+        (?, ?)
+        """,
+        tuple((participant_id, player_id) for player_id in player_ids),
     )
     return
 
@@ -237,7 +267,7 @@ async def get_player(player_id: str) -> Optional[Player]:
     return Player(**row) if row else None
 
 
-async def get_players(player_ids: List[int]) -> List[Player]:
+async def get_players(player_ids: List[str]) -> List[Player]:
     q = ",".join(["?"] * len(player_ids))
     rows = await db.fetchall(
         f"SELECT * FROM fantasyleague.players WHERE id IN ({q})", (*player_ids,)

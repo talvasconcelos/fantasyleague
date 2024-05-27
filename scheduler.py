@@ -52,6 +52,7 @@ class FantasyLeagueScheduler:
         logger.debug(f"Active leagues: {leagues}")
         for league in leagues:
             logger.info("Collecting data and processing...")
+            assert league.matchday
             matches = await self.fetch_data(
                 competition=league.competition_code, matchday=league.matchday
             )
@@ -64,6 +65,8 @@ class FantasyLeagueScheduler:
             player_ids = list(points.keys())
             await self.update_participants_total_points(player_ids)
             await self.check_competitions(league)
+            logger.info("Updating league matchday...")
+            await update_league(league.id, matchday=league.matchday + 1)
 
     async def fetch_data(self, competition, matchday=1):
         # Replace with actual function to fetch data from the API

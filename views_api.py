@@ -5,39 +5,43 @@ from fastapi.exceptions import HTTPException
 from lnbits.core.crud import get_user
 from lnbits.core.services import create_invoice
 from lnbits.core.views.api import api_payment
-from lnbits.decorators import WalletTypeInfo, require_admin_key, check_admin
+from lnbits.decorators import WalletTypeInfo, check_admin, require_admin_key
 from loguru import logger
 
 from .api_football import get_players as get_players_api
 from .crud import (
     create_league,
     create_participant,
+    create_participant_team,
     create_players_bulk,
     create_prize_distribution,
     create_settings,
     get_active_leagues,
     get_league,
     get_leagues,
-    get_participants,
+    get_participant,
     get_participant_by_wallet,
+    get_participants,
     get_player,
     get_players,
     get_players_by_league,
     get_prize_distributions,
     get_settings,
     update_league,
+    update_participant_formation,
     update_settings,
 )
 from .models import (
     CreateFantasyLeague,
     CreateParticipant,
+    CreatePlayer,
     FantasyLeague,
     Participant,
-    CreatePlayer,
-    PlayersBulk,
     Player,
+    PlayersBulk,
     PrizeDistribution,
     Settings,
+    Team,
 )
 
 fantasyleague_ext_api = APIRouter(
@@ -193,14 +197,11 @@ async def api_create_participant(
     }
     try:
         payment_hash, payment_request = await create_invoice(
-            wallet_id=data.wallet,
+            wallet_id=league.wallet,
             amount=league.buy_in,  # type: ignore
             memo=f"Join Competition: {league.name}",
             extra=extra,
         )
-        # participant = await create_participant(data)
-        # assert participant
-        # return participant.dict()
     except Exception as e:
         raise HTTPException(
             status_code=HTTPStatus.BAD_REQUEST,
@@ -224,6 +225,29 @@ async def api_check_participant_payment(league_id: str, payment_hash: str):
         logger.error(exc)
         return {"paid": False}
     return status
+
+
+@fantasyleague_ext_api.post("/participants/{participant_id}/team")
+async def api_create_participant_team(
+    participant_id: str,
+    data: Team,
+    wallet: WalletTypeInfo = Depends(require_admin_key),
+):
+    participant = await get_participant(participant_id)
+    if not participant:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND, detail="Participant not found."
+        )
+    if participant.wallet != wallet.wallet.id:
+        raise HTTPException(status_code=HTTPStatus.FORBIDDEN, detail="Unauthorized.")
+    # Check if league exists
+    league = await get_league(participant.fantasyleague_id)
+    if not league:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND, detail="Fantasy League not found."
+        )
+    await create_participant_team(participant_id, data.team)
+    await update_participant_formation(participant_id, data.formation)
 
 
 ## PLAYERS

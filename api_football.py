@@ -14,6 +14,16 @@ def _get_headers(api_key: str):
     }
 
 
+async def get_competition(api_key: str, competition_code: str):
+    client = httpx.AsyncClient(base_url=BASE_URL, headers=_get_headers(api_key))
+
+    try:
+        response = await client.get(f"competitions/{competition_code}")
+        return response.json()
+    except httpx.HTTPStatusError as exc:
+        return exc.response.json()
+
+
 async def get_competitions():
     client = httpx.AsyncClient(base_url=BASE_URL)
 

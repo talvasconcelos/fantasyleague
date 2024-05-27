@@ -15,6 +15,7 @@ class CreateFantasyLeague(BaseModel):
     competition_logo: Optional[str]
     season_start: str
     season_end: str
+    matchday: Optional[int] = 1
     buy_in: int
     fee: Optional[float] = 0.0
     first_place: Optional[float] = 0.5
@@ -25,7 +26,6 @@ class CreateFantasyLeague(BaseModel):
 
 class FantasyLeague(CreateFantasyLeague):
     id: str
-    matchday: int
     num_participants: int
     has_ended: bool
     last_updated: int
@@ -44,8 +44,14 @@ class CreateParticipant(BaseModel):
 
 class Participant(CreateParticipant):
     id: str
+    formation: Optional[str]
     total_points: int
     join_date: int
+
+
+class Team(BaseModel):
+    formation: str
+    team: list[str]
 
 
 class CreatePlayer(BaseModel):

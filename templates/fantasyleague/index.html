@@ -37,6 +37,14 @@
 
             <q-card-actions>
               <q-btn
+                v-if="userCompetitions.find(p => p.fantasyleague_id == c.id)"
+                class="full-width"
+                color="positive"
+                @click="openCompetitionURL(c.id)"
+                >Open</q-btn
+              >
+              <q-btn
+                v-else
                 class="full-width"
                 color="primary"
                 @click="openFormDialog(c.id)"
@@ -127,6 +135,7 @@
       return {
         isAdmin: false,
         competitions: [],
+        userCompetitions: [],
         formDialog: {
           show: false,
           data: {}
@@ -144,6 +153,12 @@
     methods: {
       goToAdmin() {
         window.location.href = '/fantasyleague/admin'
+      },
+      openCompetitionURL(id) {
+        const participant = this.userCompetitions.find(
+          c => c.fantasyleague_id == id
+        )
+        window.location.href = `/fantasyleague/competition/${participant.id}`
       },
       openFormDialog(id) {
         this.formDialog.data.fantasyleague_id = id
@@ -216,7 +231,9 @@
     },
     async created() {
       this.competitions = JSON.parse('{{ competitions | tojson }}')
+      this.userCompetitions = JSON.parse('{{ user_competitions | tojson }}')
       this.isAdmin = this.g.user.admin
+      console.log(this.userCompetitions)
     }
   })
 </script>

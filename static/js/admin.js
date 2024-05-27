@@ -102,6 +102,7 @@ const adminPage = async () => {
           competition_logo: selectedCompetition.image,
           season_start: selectedCompetition.startDate,
           season_end: selectedCompetition.endDate,
+          matchday: selectedCompetition.currentMatchday,
           buy_in: dialog.buy_in,
           fee: dialog.fee
         }
@@ -152,7 +153,8 @@ const adminPage = async () => {
         image: c.emblem,
         area: c.area.name,
         startDate: c.currentSeason.startDate,
-        endDate: c.currentSeason.endDate
+        endDate: c.currentSeason.endDate,
+        currentMatchday: c.currentSeason.currentMatchday
       }))
     }
   })

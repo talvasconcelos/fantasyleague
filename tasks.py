@@ -4,7 +4,7 @@ from lnbits.core.models import Payment
 from lnbits.tasks import register_invoice_listener
 from loguru import logger
 
-from .crud import get_league, create_participant
+from .crud import get_league, create_participant, update_league
 from .models import CreateParticipant
 
 
@@ -45,4 +45,7 @@ async def on_invoice_paid(payment: Payment) -> None:
                 )
                 await payment.set_pending(False)
                 await create_participant(participant)
+                await update_league(
+                    fantasyleague_id, num_participants=league.num_participants + 1
+                )
                 logger.debug("Payment for league buy-in received")
