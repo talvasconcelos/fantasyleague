@@ -9,15 +9,16 @@
         color="primary"
         icon="person_add"
       >
-      <q-menu auto-close>
-        <q-list>
-          <q-item clickable v-for="player in team" :key="player.id">
-            <q-item-section><span v-text="player.name"></span></q-item-section>
-            </q-item-section>
-          </q-item>
-        </q-list>
-      </q-menu>
-    </q-btn>
+        <q-menu auto-close>
+          <q-list>
+            <q-item clickable v-for="player in team" :key="player.id">
+              <q-item-section
+                ><span v-text="player.name"></span
+              ></q-item-section>
+            </q-item>
+          </q-list>
+        </q-menu>
+      </q-btn>
     </template>
   </div>
 </div>
