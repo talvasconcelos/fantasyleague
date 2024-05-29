@@ -231,6 +231,15 @@ async def create_participant_team(participant_id: str, player_ids: List[str]):
     return
 
 
+async def update_participant_team(participant_id: str, player_ids: List[str]):
+    await db.execute(
+        "DELETE FROM fantasyleague.participant_players WHERE participant_id = ?",
+        (participant_id,),
+    )
+    await create_participant_team(participant_id, player_ids)
+    return
+
+
 ## PLAYERS
 async def create_players_bulk(data: PlayersBulk):
     await db.execute(

@@ -29,6 +29,7 @@ from .crud import (
     get_settings,
     update_league,
     update_participant_formation,
+    update_participant_team,
     update_settings,
 )
 from .models import (
@@ -247,6 +248,29 @@ async def api_create_participant_team(
             status_code=HTTPStatus.NOT_FOUND, detail="Fantasy League not found."
         )
     await create_participant_team(participant_id, data.team)
+    await update_participant_formation(participant_id, data.formation)
+
+
+@fantasyleague_ext_api.put("/participants/{participant_id}/team")
+async def api_update_participant_team(
+    participant_id: str,
+    data: Team,
+    wallet: WalletTypeInfo = Depends(require_admin_key),
+):
+    participant = await get_participant(participant_id)
+    if not participant:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND, detail="Participant not found."
+        )
+    if participant.wallet != wallet.wallet.id:
+        raise HTTPException(status_code=HTTPStatus.FORBIDDEN, detail="Unauthorized.")
+    # Check if league exists
+    league = await get_league(participant.fantasyleague_id)
+    if not league:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND, detail="Fantasy League not found."
+        )
+    await update_participant_team(participant_id, data.team)
     await update_participant_formation(participant_id, data.formation)
 
 

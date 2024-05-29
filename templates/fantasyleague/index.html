@@ -158,7 +158,7 @@
         const participant = this.userCompetitions.find(
           c => c.fantasyleague_id == id
         )
-        window.location.href = `/fantasyleague/competition/${participant.id}`
+        window.location.href = `/fantasyleague/${participant.id}`
       },
       openFormDialog(id) {
         this.formDialog.data.fantasyleague_id = id

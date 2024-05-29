@@ -1,0 +1,29 @@
+<div class="pitch-player">
+  <div class="pitch-player--wrapper">
+    <q-btn
+      round
+      unelevated
+      :color="activePlayer ? 'primary' : 'grey'"
+      :icon="activePlayer ? 'person' : 'person_add'"
+    >
+      <q-menu auto-close>
+        <q-list>
+          <q-item
+            clickable
+            v-for="player in playersMenu"
+            :key="player.id"
+            @click="handleSelection(player.id)"
+          >
+            <q-item-section><span v-text="player.name"></span></q-item-section>
+          </q-item>
+        </q-list>
+      </q-menu>
+    </q-btn>
+    <div v-if="activePlayer">
+      <q-chip square class="full-width"
+        ><span class="ellipsis" v-text="activePlayer.name"></span>
+        <q-tooltip><span v-text="activePlayer.name"></span></q-tooltip>
+      </q-chip>
+    </div>
+  </div>
+</div>
