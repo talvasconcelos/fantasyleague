@@ -1,3 +1,4 @@
+import json
 from typing import List, Optional, Union
 
 from lnbits.helpers import urlsafe_short_hash
@@ -9,6 +10,7 @@ from .models import (
     CreateParticipant,
     CreatePrizeDistribution,
     FantasyLeague,
+    LineUp,
     Participant,
     Player,
     Players,
@@ -82,10 +84,10 @@ async def create_league(data: CreateFantasyLeague) -> FantasyLeague:
         """
         INSERT INTO fantasyleague.competitions (
             id, wallet, name, description, competition_type, competition_code, competition_logo,
-            season_start, season_end, matchday, buy_in, fee, first_place, second_place,
+            season_start, season_end, season, matchday, buy_in, fee, first_place, second_place,
             third_place, matchday_winner
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             league_id,
@@ -97,6 +99,7 @@ async def create_league(data: CreateFantasyLeague) -> FantasyLeague:
             data.competition_logo,
             data.season_start,
             data.season_end,
+            data.season,
             data.matchday,
             data.buy_in,
             data.fee,
@@ -211,6 +214,14 @@ async def update_participant_formation(participant_id: str, formation: str):
     return
 
 
+async def update_participant_lineup(participant_id: str, lineup: LineUp):
+    await db.execute(
+        "UPDATE fantasyleague.participants SET lineup = ? WHERE id = ?",
+        (json.dumps(lineup), participant_id),
+    )
+    return
+
+
 async def update_participant_points(participant_id: str, points: int):
     await db.execute(
         "UPDATE fantasyleague.participants SET total_points = ? WHERE id = ?",
@@ -244,9 +255,9 @@ async def update_participant_team(participant_id: str, player_ids: List[str]):
 async def create_players_bulk(data: PlayersBulk):
     await db.execute(
         """
-        INSERT INTO fantasyleague.players (id, league_id, api_id, name, position, team)
+        INSERT INTO fantasyleague.players (id, league_id, api_id, name, position, team, photo)
         VALUES
-        (?, ?, ?, ?, ?, ?)
+        (?, ?, ?, ?, ?, ?, ?)
         """,
         tuple(
             (
@@ -256,6 +267,7 @@ async def create_players_bulk(data: PlayersBulk):
                 player.name,
                 player.position,
                 player.team,
+                player.photo,
             )
             for player in data.players
         ),

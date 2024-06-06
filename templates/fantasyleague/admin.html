@@ -51,9 +51,7 @@
   {% include "fantasyleague/_admin_dialogs.html" %}
 </div>
 {% endblock %} {% block scripts %} {{ window_vars(user) }}
-<script>
-  const competitions = JSON.parse('{{ competitions | tojson }}')
-</script>
+
 <script src="{{ url_for('fantasyleague_static', path='js/utils.js') }}"></script>
 
 <script src="{{ url_for('fantasyleague_static', path='components/settings/settings.js') }}"></script>

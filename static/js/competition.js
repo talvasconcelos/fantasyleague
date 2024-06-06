@@ -13,6 +13,7 @@ const competitionPage = async () => {
         league: {},
         team: [],
         formation: '',
+        lineUp: [],
         teamColumns: [
           {label: 'Name', align: 'left', field: 'name'},
           {label: 'Position', align: 'left', field: 'position'},
@@ -77,7 +78,7 @@ const competitionPage = async () => {
         })
       },
       async saveTeam() {
-        if (hasTeam) return await this.updateTeam()
+        if (this.hasTeam) return await this.updateTeam()
         try {
           const wallet = _.findWhere(this.g.user.wallets, {
             id: this.participant.wallet
@@ -91,6 +92,9 @@ const competitionPage = async () => {
               team: this.team.map(player => player.id)
             }
           )
+          if (data) {
+            this.hasTeam = true
+          }
         } catch (error) {
           console.log(error)
         }
@@ -116,6 +120,7 @@ const competitionPage = async () => {
     },
     async created() {
       this.participant = participant
+      this.lineUp = JSON.parse(this.participant.lineup)
       this.league = league
       this.team = team
       if (this.team.length > 0) {
@@ -124,7 +129,7 @@ const competitionPage = async () => {
       this.pitchSrc = pitchSrc
       this.formations = formations()
       this.formation = this.participant.formation || '4-4-2'
-      console.log(this.team)
+      console.log(this.lineUp)
       await this.getLeaguePlayers()
     }
   })

@@ -1,50 +1,73 @@
 <div>
   <div class="pitch">
     <div class="pitch-top">
-      <div class="pitch-row">
-        <template v-for="(p, i) in forwards">
+      <template v-if="hasTeam">
+        <div class="pitch-row" v-for="(row, index) in formationArr().reverse()">
           <pitch-player
-            :pos="'offence'"
-            :player="p"
+            v-for="(p, i) in row"
+            :pos="index === 0 ? 'offence' : index === 1 ? 'midfield' : 'defence'"
+            :player="null"
             :filtered-positions="filteredPositions"
             @add-player="addPlayer"
             :index="i"
           ></pitch-player>
-        </template>
-      </div>
-      <div class="pitch-row">
-        <template v-for="(p, i) in midfielders">
-          <pitch-player
-            :pos="'midfield'"
-            :player="p"
-            :filtered-positions="filteredPositions"
-            @add-player="addPlayer"
-            :index="i"
-          ></pitch-player>
-        </template>
-      </div>
-      <div class="pitch-row">
-        <template v-for="(p, i) in defenders">
-          <pitch-player
-            :pos="'defence'"
-            :player="p"
-            :filtered-positions="filteredPositions"
-            @add-player="addPlayer"
-            :index="i"
-          ></pitch-player>
-        </template>
-      </div>
-      <div class="pitch-row">
-        <template v-for="(p, i) in goalkeepers">
+        </div>
+        <div class="pitch-row">
           <pitch-player
             :pos="'goalkeeper'"
-            :player="p"
+            :player="null"
             :filtered-positions="filteredPositions"
             @add-player="addPlayer"
-            :index="i"
+            :index="0"
           ></pitch-player>
-        </template>
-      </div>
+        </div>
+      </template>
+      <template v-else>
+        <div class="pitch-row">
+          <template v-for="(p, i) in forwards">
+            <pitch-player
+              :pos="'offence'"
+              :player="p"
+              :filtered-positions="filteredPositions"
+              @add-player="addPlayer"
+              :index="i"
+            ></pitch-player>
+          </template>
+        </div>
+        <div class="pitch-row">
+          <template v-for="(p, i) in midfielders">
+            <pitch-player
+              :pos="'midfield'"
+              :player="p"
+              :filtered-positions="filteredPositions"
+              @add-player="addPlayer"
+              :index="i"
+            ></pitch-player>
+          </template>
+        </div>
+        <div class="pitch-row">
+          <template v-for="(p, i) in defenders">
+            <pitch-player
+              :pos="'defence'"
+              :player="p"
+              :filtered-positions="filteredPositions"
+              @add-player="addPlayer"
+              :index="i"
+            ></pitch-player>
+          </template>
+        </div>
+        <div class="pitch-row">
+          <template v-for="(p, i) in goalkeepers">
+            <pitch-player
+              :pos="'goalkeeper'"
+              :player="p"
+              :filtered-positions="filteredPositions"
+              @add-player="addPlayer"
+              :index="i"
+            ></pitch-player>
+          </template>
+        </div>
+      </template>
     </div>
   </div>
 </div>

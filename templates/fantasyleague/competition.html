@@ -10,16 +10,17 @@
         </div>
       </q-card-section>
       <q-card-section class="row flex-center q-col-gutter-md">
-        <div v-if="hasTeam" class="col-md-12 col-6">
-          <q-select
+        <div v-if="hasTeam" class="col-12 col-lg-6">
+          <!-- <q-select
             filled
             dense
             v-model="formation"
             :options="Object.keys(formations)"
             label="Formation"
-          ></q-select>
+          ></q-select> -->
           <div class="q-mt-md">
-            <q-list bordered>
+            <q-list bordered padding>
+              <q-item-label header>Starting Eleven</q-item-label>
               <q-item
                 clickable
                 v-ripple
@@ -36,7 +37,14 @@
             </q-list>
           </div>
         </div>
-        <div :class="hasTeam ? 'col-md-12 col-6':'col-12'">
+        <div :class="hasTeam ? 'col-12 col-lg-6':'col-12'">
+          <q-select
+            filled
+            v-model="formation"
+            :options="Object.keys(formations)"
+            label="Formation"
+            class="q-mb-md"
+          ></q-select>
           <pitch
             :pitch-src="pitchSrc"
             :team="team"
@@ -44,6 +52,7 @@
             :players="players"
             :has-team="hasTeam"
             @add-player="addToTeam"
+            :line-up="lineUp"
           ></pitch>
           <q-btn
             color="primary"

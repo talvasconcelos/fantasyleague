@@ -7,8 +7,9 @@ from lnbits.core.services import create_invoice
 from lnbits.core.views.api import api_payment
 from lnbits.decorators import WalletTypeInfo, check_admin, require_admin_key
 from loguru import logger
+from tests import api
 
-from .api_football import get_players as get_players_api
+from .api_football import get_competitions, get_league_players, get_round
 from .crud import (
     create_league,
     create_participant,
@@ -29,6 +30,7 @@ from .crud import (
     get_settings,
     update_league,
     update_participant_formation,
+    update_participant_lineup,
     update_participant_team,
     update_settings,
 )
@@ -37,6 +39,7 @@ from .models import (
     CreateParticipant,
     CreatePlayer,
     FantasyLeague,
+    LineUp,
     Participant,
     Player,
     PlayersBulk,
@@ -90,6 +93,13 @@ async def api_update_settings(
 ## COMPETITIONS
 
 
+@fantasyleague_ext_api.get("/eligible", description="Get all eligible competitions")
+async def api_get_eligible_leagues():
+    api_key = await get_settings()
+    assert api_key, "Please add your API key first."
+    return await get_competitions(api_key.api_key)
+
+
 @fantasyleague_ext_api.get("/competition", description="Get all Fantasy Leagues")
 async def api_get_leagues(
     all_wallets: bool = Query(False),
@@ -122,12 +132,18 @@ async def api_create_league(
     api_key = await get_settings()
     assert api_key, "Please add your API key first."
     try:
+        matchday = await get_round(api_key.api_key, data.competition_code, data.season)
+        data.matchday = matchday
         league = await create_league(data)
         assert league
+        # season = league.season_start.split("-")[0]
         players = [
             CreatePlayer(**player)
-            for player in await get_players_api(
-                api_key.api_key, league.id, competition_code=league.competition_code
+            for player in await get_league_players(
+                api_key=api_key.api_key,
+                league_id=league.id,
+                competition_code=league.competition_code,
+                season=league.season,
             )
         ]
         await create_players_bulk(PlayersBulk(players=players))
@@ -272,6 +288,28 @@ async def api_update_participant_team(
         )
     await update_participant_team(participant_id, data.team)
     await update_participant_formation(participant_id, data.formation)
+
+
+@fantasyleague_ext_api.put("/participants/{participant_id}/lineup")
+async def api_update_participant_lineup(
+    participant_id: str,
+    data: LineUp,
+    wallet: WalletTypeInfo = Depends(require_admin_key),
+):
+    participant = await get_participant(participant_id)
+    if not participant:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND, detail="Participant not found."
+        )
+    if participant.wallet != wallet.wallet.id:
+        raise HTTPException(status_code=HTTPStatus.FORBIDDEN, detail="Unauthorized.")
+    # Check if league exists
+    league = await get_league(participant.fantasyleague_id)
+    if not league:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND, detail="Fantasy League not found."
+        )
+    await update_participant_lineup(participant_id, data)
 
 
 ## PLAYERS

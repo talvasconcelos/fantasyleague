@@ -18,7 +18,8 @@ async def m001_initial(db):
             competition_type TEXT NOT NULL,
             competition_code TEXT NOT NULL,
             competition_logo TEXT,
-            matchday INTEGER DEFAULT 1,
+            season INTEGER NOT NULL,
+            matchday TEXT,
             season_start TEXT NOT NULL,
             season_end TEXT NOT NULL,
             has_ended BOOLEAN DEFAULT FALSE,
@@ -41,6 +42,7 @@ async def m001_initial(db):
             wallet TEXT NOT NULL,
             name TEXT NOT NULL,
             formation TEXT DEFAULT '4-4-2',
+            lineup TEXT DEFAULT '[]',
             total_points INTEGER DEFAULT 0,
             join_date TIMESTAMP NOT NULL DEFAULT {db.timestamp_now}
         );
@@ -56,6 +58,7 @@ async def m001_initial(db):
             name TEXT NOT NULL,
             position TEXT NOT NULL,
             team TEXT NOT NULL,
+            photo TEXT,
             points INTEGER DEFAULT 0
         );
         """

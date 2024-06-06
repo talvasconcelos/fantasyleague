@@ -16,6 +16,7 @@ const adminPage = async () => {
         competitionOptions: [],
         leagues: [],
         selectedLeague: [],
+        loading: false,
         leaguesColumns: [
           {
             label: 'ID',
@@ -88,21 +89,34 @@ const adminPage = async () => {
           LNbits.utils.notifyApiError(error)
         }
       },
+      async getAvailableCompetitions() {
+        if (!this.api_key) return
+        const {data} = await LNbits.api.request(
+          'GET',
+          '/fantasyleague/api/v1/eligible',
+          this.g.user.wallets[0].adminkey
+        )
+        this.competitions = [...data]
+      },
       async submitCompetition() {
-        let selectedCompetition = this.competitionOptions.find(
-          c => c.value === this.competitionDialog.data.competition_code
+        this.loading = true
+        let comp = this.competitions.find(
+          c => c.league.id === this.competitionDialog.data.competition_code
         )
         let dialog = this.competitionDialog.data
+        console.log(comp)
+        let season = comp.seasons[0]
+
         let data = {
           wallet: dialog.wallet,
           name: dialog.name,
           description: dialog.description,
-          competition_type: selectedCompetition.type,
-          competition_code: selectedCompetition.value,
-          competition_logo: selectedCompetition.image,
-          season_start: selectedCompetition.startDate,
-          season_end: selectedCompetition.endDate,
-          matchday: selectedCompetition.currentMatchday,
+          competition_type: comp.league.type,
+          competition_code: comp.league.id,
+          competition_logo: comp.league.logo,
+          season_start: season.start,
+          season_end: season.end,
+          season: season.year,
           buy_in: dialog.buy_in,
           fee: dialog.fee
         }
@@ -124,12 +138,14 @@ const adminPage = async () => {
               message: 'League created',
               timeout: 5000
             })
+            this.loading = false
             this.competitionDialog.show = false
             this.leagues.push(league.data)
             console.log(this.leagues)
           }
         } catch (error) {
           console.warn(error)
+          this.loading = false
           LNbits.utils.notifyApiError(error)
         }
       }
@@ -140,21 +156,21 @@ const adminPage = async () => {
         '/fantasyleague/api/v1/settings',
         this.g.user.wallets[0].adminkey
       )
+      console.log(settings)
       if (settings.data) {
         this.api_key = settings.data.api_key
       }
       await this.getLeagues()
-      this.competitions = [...competitions]
-      // console.log(this.competitions)
+      await this.getAvailableCompetitions()
+      console.log(this.competitions)
       this.competitionOptions = this.competitions.map(c => ({
-        label: c.name,
-        value: c.code,
-        type: c.type,
-        image: c.emblem,
-        area: c.area.name,
-        startDate: c.currentSeason.startDate,
-        endDate: c.currentSeason.endDate,
-        currentMatchday: c.currentSeason.currentMatchday
+        label: c.league.name,
+        value: c.league.id,
+        type: c.league.type,
+        image: c.league.logo,
+        area: c.country.name,
+        startDate: c.seasons[0].start,
+        endDate: c.seasons[0].end
       }))
     }
   })

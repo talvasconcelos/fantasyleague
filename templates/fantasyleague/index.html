@@ -85,7 +85,7 @@
             color="primary"
             :disable="formDialog.data.wallet == null || formDialog.data.name == null"
             type="submit"
-            >Create Form</q-btn
+            >Join</q-btn
           >
           <q-btn v-close-popup flat color="grey" class="q-ml-auto"
             >Cancel</q-btn
@@ -215,6 +215,10 @@
           message: 'Sats received, thanks!',
           icon: 'thumb_up'
         })
+        setTimeout(() => {
+          // Refresh page (necessary to update userCompetitions)
+          location.reload()
+        }, 1000)
       },
       resetData() {
         this.formDialog.data = {}

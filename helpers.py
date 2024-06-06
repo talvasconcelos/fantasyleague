@@ -1,95 +1,70 @@
-def calculate_player_points(match_data):
+def calculate_player_points(player_data):
     points = {}
-    for match in match_data:
-        _initialize_points(match, points)
-        _calculate_points_for_goals(match, points)
-        _calculate_points_for_assists(match, points)
-        _calculate_points_for_cards(match, points)
-        _calculate_points_for_playing_time(match, points)
-        _calculate_points_for_saves(match, points)
+
+    _initialize_points(player_data, points)
+    _calculate_points_for_goals(player_data, points)
+    _calculate_points_for_assists(player_data, points)
+    _calculate_points_for_cards(player_data, points)
+    _calculate_points_for_playing_time(player_data, points)
+    _calculate_points_for_saves(player_data, points)
 
     return points
 
 
-def _initialize_points(match_data, points):
-    for team in ["homeTeam", "awayTeam"]:
-        for player in match_data[team]["lineup"]:
-            points[player["id"]] = 0
-        for player in match_data[team]["bench"]:
-            points[player["id"]] = 0
+def _initialize_points(player_data, points):
+    for player_entry in player_data:
+        player_id = player_entry["player"]["id"]
+        points[player_id] = 0
 
 
-def _calculate_points_for_goals(match_data, points):
-    for goal in match_data["goals"]:
-        player_id = goal["scorer"]["id"]
-        # team = goal["team"]["name"]
-        player = _find_player_by_id(match_data, player_id)
-        if player:
-            if player["position"] == "Goalkeeper":
-                points[player_id] += 10
-            elif player["position"] in ["Centre-Back", "Right-Back", "Left-Back"]:
-                points[player_id] += 8
-            elif player["position"] in [
-                "Defensive Midfield",
-                "Central Midfield",
-                "Right Winger",
-                "Left Winger",
-                "Attacking Midfield",
-            ]:
-                points[player_id] += 6
-            else:
-                points[player_id] += 4
+def _calculate_points_for_goals(player_data, points):
+    for player_entry in player_data:
+        player_id = player_entry["player"]["id"]
+        stats = player_entry["statistics"]["goals"]
+        if stats["total"] is not None:
+            player_position = player_entry["statistics"]["games"]["position"]
+            if player_position == "G":
+                points[player_id] += 10 * stats["total"]
+            elif player_position in ["D"]:
+                points[player_id] += 8 * stats["total"]
+            elif player_position in ["M"]:
+                points[player_id] += 6 * stats["total"]
+            else:  # Forward or other positions
+                points[player_id] += 4 * stats["total"]
 
 
-def _calculate_points_for_assists(match_data, points):
-    for goal in match_data["goals"]:
-        if goal.get("assist"):
-            assist_player_id = goal["assist"]["id"]
-            points[assist_player_id] += 3
+def _calculate_points_for_assists(player_data, points):
+    for player_entry in player_data:
+        player_id = player_entry["player"]["id"]
+        stats = player_entry["statistics"]["goals"]
+        if stats["assists"] is not None:
+            points[player_id] += 3 * stats["assists"]
 
 
-def _calculate_points_for_cards(match_data, points):
-    for booking in match_data["bookings"]:
-        player_id = booking["player"]["id"]
-        card = booking["card"]
-        if card == "YELLOW":
-            points[player_id] -= 1
-        elif card == "RED":
-            points[player_id] -= 3
+def _calculate_points_for_cards(player_data, points):
+    for player_entry in player_data:
+        player_id = player_entry["player"]["id"]
+        cards = player_entry["statistics"]["cards"]
+        points[player_id] -= 1 * cards["yellow"]
+        points[player_id] -= 3 * cards["red"]
 
 
-def _calculate_points_for_playing_time(match_data, points):
-    for team in ["homeTeam", "awayTeam"]:
-        for player in match_data[team]["lineup"]:
-            points[player["id"]] += 2  # Assuming they played at least 60 minutes
-        for sub in match_data["substitutions"]:
-            if sub["playerIn"]["id"] in points:
-                points[sub["playerIn"]["id"]] += 1
-                points[sub["playerOut"]["id"]] -= (
-                    1  # Correcting points for the substituted player
-                )
+def _calculate_points_for_playing_time(player_data, points):
+    for player_entry in player_data:
+        player_id = player_entry["player"]["id"]
+        minutes_played = player_entry["statistics"]["games"]["minutes"]
+        if minutes_played >= 60:
+            points[player_id] += 2
+        elif minutes_played > 0:
+            points[player_id] += 1
 
 
-def _calculate_points_for_saves(match_data, points):
-    for team in ["homeTeam", "awayTeam"]:
-        goalkeeper = _find_goalkeeper(match_data, team)
-        if goalkeeper:
-            points[goalkeeper["id"]] += match_data[team]["statistics"].get("saves", 0)
-
-
-def _find_player_by_id(match_data, player_id):
-    for team in ["homeTeam", "awayTeam"]:
-        for player in match_data[team]["lineup"] + match_data[team]["bench"]:
-            if player["id"] == player_id:
-                return player
-    return None
-
-
-def _find_goalkeeper(match_data, team):
-    return next(
-        (p for p in match_data[team]["lineup"] if p["position"] == "Goalkeeper"),
-        None,
-    )
+def _calculate_points_for_saves(player_data, points):
+    for player_entry in player_data:
+        player_id = player_entry["player"]["id"]
+        stats = player_entry["statistics"]
+        if stats["games"]["position"] == "G":  # Check if the player is a goalkeeper
+            points[player_id] += stats["goals"]["saves"]
 
 
 # Example usage

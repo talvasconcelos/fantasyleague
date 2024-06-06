@@ -20,7 +20,9 @@ async function pitch(path) {
         goalkeepers: Array(2).fill(null),
         defenders: Array(5).fill(null),
         midfielders: Array(5).fill(null),
-        forwards: Array(3).fill(null)
+        forwards: Array(3).fill(null),
+        startingEleven: [],
+        substitutes: []
       }
     },
     computed: {},
@@ -36,6 +38,9 @@ async function pitch(path) {
           playerList = playerList.filter(player => !this.team.includes(player))
         }
         return playerList
+      },
+      addToEleven(player_id) {
+        player = this.players.find(player => player.id === player_id)
       },
       addPlayer(player, idx, pos) {
         switch (pos) {
@@ -101,6 +106,7 @@ async function pitch(path) {
     },
     async created() {
       this.updateTeam()
+      console.log('lineUp', constructLineUp(this.formation, this.team))
     }
   })
 }

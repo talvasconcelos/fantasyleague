@@ -15,16 +15,14 @@
       >
         <template v-slot:option="scope">
           <q-item v-bind="scope.itemProps" v-on="scope.itemEvents">
-            <q-item-section avatar>
+            <!-- <q-item-section avatar>
               <q-avatar rounded color="white">
                 <img :src="scope.opt.image" />
               </q-avatar>
-            </q-item-section>
+            </q-item-section> -->
             <q-item-section>
-              <q-item-label
-                v-text="`${scope.opt.area} - ${scope.opt.value}`"
-              ></q-item-label>
-              <q-item-label caption v-text="scope.opt.label"></q-item-label>
+              <q-item-label v-text="scope.opt.label"></q-item-label>
+              <q-item-label caption v-text="`${scope.opt.area}`"></q-item-label>
             </q-item-section>
             <q-item-section side top>
               <q-item-label

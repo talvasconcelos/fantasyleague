@@ -3,20 +3,20 @@ from datetime import datetime, timedelta, timezone
 
 from loguru import logger
 
-from .api_football import get_matches
+from .api_football import get_matches, get_player_stats_by_match
 from .crud import (
     get_active_leagues,
-    get_settings,
     get_participant_team,
     get_participants,
     get_participants_by_players,
+    get_settings,
     update_league,
     update_participant_points,
     update_player_points,
 )
 from .helpers import calculate_player_points
-from .services import pay_rewards_overall
 from .models import FantasyLeague
+from .services import pay_rewards_overall
 
 
 class FantasyLeagueScheduler:
@@ -54,24 +54,28 @@ class FantasyLeagueScheduler:
             logger.info("Collecting data and processing...")
             assert league.matchday
             matches = await self.fetch_data(
-                competition=league.competition_code, matchday=league.matchday
+                competition=league.competition_code,
+                matchday=league.matchday,
+                season=league.season,
             )
             logger.debug(f"Matches: {matches}")
             if matches is None:
                 logger.info("Not all matches played yet.")
-                return
+                continue
 
-            points = await self.calculate_points(matches)
+            statistics = await get_player_stats_by_match(self.api_key, matches)
+
+            points = await self.calculate_points(statistics)
             player_ids = list(points.keys())
             await self.update_participants_total_points(player_ids)
             await self.check_competitions(league)
             logger.info("Updating league matchday...")
             await update_league(league.id, matchday=league.matchday + 1)
 
-    async def fetch_data(self, competition, matchday=1):
+    async def fetch_data(self, competition, matchday: str, season: int):
         # Replace with actual function to fetch data from the API
-        logger.info("Fetching data from API...")
-        return await get_matches(self.api_key, competition, matchday)
+        logger.info("Fetching matches from API...")
+        return await get_matches(self.api_key, competition, season, matchday)
 
     async def calculate_points(self, matches):
         # Replace with actual function to calculate player points
