@@ -160,7 +160,7 @@ const competitionPage = async () => {
         participant,
         team,
         formation: participant.formation || '4-4-2',
-        lineUp: participant.lineup.split(',')
+        lineUp: participant.lineup ? participant.lineup.split(',') : []
       })
       if (team.length > 0) {
         state.hasTeam = true

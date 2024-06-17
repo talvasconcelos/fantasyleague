@@ -194,13 +194,14 @@ async function pitch(path) {
           this.midfielders,
           this.forwards
         )
+        this.updateLineup()
       }
     },
     async created() {
       // this.updateTeam()
       // state.setState({ping: 'pong'})
-
-      if (state.hasTeam) {
+      console.log('created pitch', state.lineUp)
+      if (state.lineUp.length > 0) {
         this.updateLineup()
         // let lineup
         // if (this.lineup.length == 0) {
