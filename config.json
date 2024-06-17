@@ -1,7 +1,7 @@
 {
   "name": "Fantasy League",
   "short_description": "Football Fantasy League",
-  "tile": "/fantasyleague/main/static/fantasyleague.png",
+  "tile": "/fantasyleague/static/fantasyleague.png",
   "min_lnbits_version": "0.12.6",
   "donate": "donate@legend.lnbits.com",
   "contributors": [
