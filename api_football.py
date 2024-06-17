@@ -65,8 +65,8 @@ async def get_competitions(api_key: str):
             end_date = datetime.datetime.strptime(season["end"], "%Y-%m-%d").date()
 
             # if competition["league"]["type"] != "Cup" and (end_date - today).days < 30:
-            if (end_date - today).days < 15:
-                continue
+            # if (end_date - today).days < 15:
+            #     continue
             if today < end_date:
                 eligible_competitions.append(competition)
 
