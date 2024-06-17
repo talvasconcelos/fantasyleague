@@ -21,7 +21,7 @@ from .services import pay_rewards_overall
 
 class FantasyLeagueScheduler:
     def __init__(self, interval_hours=12):
-        self.interval_hours = 1  # interval_hours
+        self.interval_hours = interval_hours
         self.now = datetime.now(timezone.utc)
         self.next_run_time = self.now + timedelta(hours=self.interval_hours)
         self.running = False
@@ -36,8 +36,8 @@ class FantasyLeagueScheduler:
                 if self.now >= self.next_run_time:
                     self.next_run_time = self.now + timedelta(hours=self.interval_hours)
                     await self.collect_and_process_data()
-                await asyncio.sleep(60 * 5)  # Testing
-                # await asyncio.sleep(60 * 60 * 4)  # Check every 4 hours
+                # await asyncio.sleep(60 * 5)  # Testing
+                await asyncio.sleep(60 * 60 * 4)  # Check every 4 hours
             except Exception as ex:
                 logger.warning(ex)
                 await asyncio.sleep(60)  # Wait a bit before retrying
