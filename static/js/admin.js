@@ -14,6 +14,7 @@ const adminPage = async () => {
         },
         competitions: [],
         competitionOptions: [],
+        filter: '',
         leagues: [],
         selectedLeague: [],
         loading: false,
@@ -48,7 +49,14 @@ const adminPage = async () => {
         ]
       }
     },
-    computed: {},
+    computed: {
+      displayCompetition() {
+        const code = this.competitionDialog.data.competition_code
+        if (!code) return ''
+        const comp = this.competitions.find(c => c.league.id === code)
+        return `${comp.league.name} (${comp.country.name})`
+      }
+    },
     methods: {
       saveSettings(data) {
         LNbits.api
@@ -71,6 +79,29 @@ const adminPage = async () => {
             LNbits.utils.notifyApiError(error)
           })
       },
+      async openCompetitionDialog() {
+        try {
+          await this.getAvailableCompetitions()
+          this.competitionOptions = this.competitions
+            .map(c => ({
+              label: c.league.name,
+              value: c.league.id,
+              type: c.league.type,
+              image: c.league.logo,
+              area: c.country.name,
+              startDate: c.seasons[0].start,
+              endDate: c.seasons[0].end
+            }))
+            .sort((a, b) => {
+              // sort by start date closer to today
+              return new Date(b.startDate) - new Date(a.startDate)
+            })
+          this.competitionDialog.show = true
+        } catch (error) {
+          console.warn(error)
+          LNbits.utils.notifyApiError(error)
+        }
+      },
       closeCompetitionDialog() {
         this.competitionDialog.show = false
       },
@@ -89,6 +120,14 @@ const adminPage = async () => {
           LNbits.utils.notifyApiError(error)
         }
       },
+      filterCompetitions(val, update, abort) {
+        update(() => {
+          const searchTerm = val.toLowerCase()
+          this.competitionOptions = this.competitionOptions.filter(c =>
+            c.label.toLowerCase().includes(searchTerm)
+          )
+        })
+      },
       async getAvailableCompetitions() {
         if (!this.api_key) return
         const {data} = await LNbits.api.request(
@@ -104,7 +143,10 @@ const adminPage = async () => {
           c => c.league.id === this.competitionDialog.data.competition_code
         )
         let dialog = this.competitionDialog.data
-        console.log(comp)
+        dialog.dismissMsg = this.$q.notify({
+          message: 'Creating league, fetching players... Please wait!',
+          timeout: 0
+        })
         let season = comp.seasons[0]
 
         let data = {
@@ -133,6 +175,7 @@ const adminPage = async () => {
             data
           )
           if (league.data) {
+            dialog.dismissMsg()
             this.$q.notify({
               type: 'positive',
               message: 'League created',
@@ -148,6 +191,55 @@ const adminPage = async () => {
           this.loading = false
           LNbits.utils.notifyApiError(error)
         }
+      },
+      deleteCompetition(league_id) {
+        LNbits.utils
+          .confirmDialog('Are you sure you want to delete this competition?')
+          .onOk(() => {
+            LNbits.api
+              .request(
+                'DELETE',
+                `/fantasyleague/api/v1/competition/${league_id}`,
+                this.g.user.wallets[0].adminkey
+              )
+              .then(() => {
+                this.leagues = this.leagues.filter(l => l.id !== league_id)
+                this.$q.notify({
+                  type: 'positive',
+                  message: 'Competition deleted',
+                  timeout: 5000
+                })
+              })
+              .catch(error => {
+                console.warn(error)
+                LNbits.utils.notifyApiError(error)
+              })
+          })
+      },
+      async refreshPlayers(league_id) {
+        LNbits.utils
+          .confirmDialog(
+            'Are you sure you want to refresh players? \nThis will get all players from the API again.'
+          )
+          .onOk(() => {
+            LNbits.api
+              .request(
+                'GET',
+                `/fantasyleague/api/v1/competition/${league_id}/players/update`,
+                this.g.user.wallets[0].adminkey
+              )
+              .then(() => {
+                this.$q.notify({
+                  type: 'positive',
+                  message: 'Players refreshed',
+                  timeout: 5000
+                })
+              })
+              .catch(error => {
+                console.warn(error)
+                LNbits.utils.notifyApiError(error)
+              })
+          })
       }
     },
     async created() {
@@ -156,22 +248,25 @@ const adminPage = async () => {
         '/fantasyleague/api/v1/settings',
         this.g.user.wallets[0].adminkey
       )
-      console.log(settings)
       if (settings.data) {
         this.api_key = settings.data.api_key
       }
       await this.getLeagues()
-      await this.getAvailableCompetitions()
-      console.log(this.competitions)
-      this.competitionOptions = this.competitions.map(c => ({
-        label: c.league.name,
-        value: c.league.id,
-        type: c.league.type,
-        image: c.league.logo,
-        area: c.country.name,
-        startDate: c.seasons[0].start,
-        endDate: c.seasons[0].end
-      }))
+      // await this.getAvailableCompetitions()
+      // this.competitionOptions = this.competitions
+      //   .map(c => ({
+      //     label: c.league.name,
+      //     value: c.league.id,
+      //     type: c.league.type,
+      //     image: c.league.logo,
+      //     area: c.country.name,
+      //     startDate: c.seasons[0].start,
+      //     endDate: c.seasons[0].end
+      //   }))
+      //   .sort((a, b) => {
+      //     // sort by start date closer to today
+      //     return new Date(b.startDate) - new Date(a.startDate)
+      //   })
     }
   })
 }

@@ -3,57 +3,103 @@ async function pitch(path) {
 
   Vue.component('pitch', {
     name: 'pitch',
-    props: ['pitch-src', 'formation', 'team', 'players', 'has-team'],
+    props: ['team'],
     template,
 
     watch: {
       immediate: true,
       team() {
-        console.log('team changed')
-        // console.log(this.team)
         this.updateTeam()
       }
     },
 
     data: function () {
       return {
+        state,
         goalkeepers: Array(2).fill(null),
         defenders: Array(5).fill(null),
         midfielders: Array(5).fill(null),
         forwards: Array(3).fill(null),
-        startingEleven: [],
-        substitutes: []
+        startingEleven: {},
+        substitutes: [],
+        formation: state.formation,
+        formations: ['4-4-2', '4-3-3', '3-5-2', '5-3-2', '4-5-1', '3-4-3']
+        // team: state.team
       }
     },
-    computed: {},
-    methods: {
+    computed: {
       formationArr() {
         return this.formation.split('-').map(Number)
-      },
-      filteredPositions(position, menu = false) {
-        let playerList = this.players.filter(
+      }
+    },
+    methods: {
+      filteredLineup(position, menu = false) {
+        let playerList = state.team.filter(
           player => player.position.toLowerCase() === position.toLowerCase()
         )
         if (menu) {
-          playerList = playerList.filter(player => !this.team.includes(player))
+          playerList = playerList.filter(
+            player => !this.startingEleven[position].includes(player)
+          )
         }
         return playerList
       },
-      addToEleven(player_id) {
-        player = this.players.find(player => player.id === player_id)
+      filteredPositions(position, menu = false) {
+        let playerList = state.players.filter(
+          player => player.position.toLowerCase() === position.toLowerCase()
+        )
+        if (menu) {
+          playerList = playerList.filter(player => !state.team.includes(player))
+        }
+        return playerList
+      },
+      handleFormationChange(val) {
+        state.formation = val
+        this.formation = val
+        this.updateLineup()
+      },
+      addToLineup(player_id, idx, pos) {
+        const player = state.team.find(p => p.id == player_id)
+        switch (pos) {
+          case 'goalkeeper':
+            this.substitutes.push(this.startingEleven.goalkeeper[idx])
+            this.startingEleven.goalkeeper[idx] = player
+            break
+          case 'defender':
+            this.substitutes.push(this.startingEleven.defender[idx])
+            this.startingEleven.defender[idx] = player
+            break
+          case 'midfielder':
+            this.substitutes.push(this.startingEleven.midfielder[idx])
+            this.startingEleven.midfielder[idx] = player
+            break
+          case 'attacker':
+            this.substitutes.push(this.startingEleven.attacker[idx])
+            this.startingEleven.attacker[idx] = player
+            break
+        }
+        let lineup = [
+          ...this.startingEleven.goalkeeper,
+          ...this.startingEleven.defender,
+          ...this.startingEleven.midfielder,
+          ...this.startingEleven.attacker,
+          ...this.substitutes
+        ].map(player => player.id)
+        state.updateState('lineUp', lineup)
+        this.updateLineup()
       },
       addPlayer(player, idx, pos) {
         switch (pos) {
           case 'goalkeeper':
             this.goalkeepers[idx] = player
             break
-          case 'defence':
+          case 'defender':
             this.defenders[idx] = player
             break
-          case 'midfield':
+          case 'midfielder':
             this.midfielders[idx] = player
             break
-          case 'offence':
+          case 'attacker':
             this.forwards[idx] = player
             break
         }
@@ -64,7 +110,46 @@ async function pitch(path) {
           ...this.forwards
         ].filter(player => player !== null)
         this.$emit('add-player', team)
-        // this.$nextTick(() => this.updateTeam())
+        // this.$nextTick(() => {
+        //   this.team = state.team
+        // })
+      },
+      emitUpdateLineup() {
+        console.log('emit update lineup', state.getState())
+        this.$emit('update-lineup')
+        // this.updateLineup()
+      },
+      updateLineup() {
+        let lineup
+        if (state.lineUp.length == 0) {
+          lineup = constructLineUp(state.formation, state.team)
+        } else {
+          lineup = state.lineUp.map(player => {
+            return state.team.find(p => p.id == player)
+          })
+          lineup = constructLineUp(state.formation, lineup)
+        }
+        console.log('update lineup', lineup)
+        this.startingEleven = {
+          goalkeeper: lineup.get('goalkeepers'),
+          defender: lineup.get('defenders'),
+          midfielder: lineup.get('midfielders'),
+          attacker: lineup.get('attackers'),
+          position: ['attacker', 'midfielder', 'defender', 'goalkeeper']
+        }
+
+        this.substitutes = lineup.get('substitutes')
+        eleven = [
+          ...this.startingEleven.goalkeeper,
+          ...this.startingEleven.defender,
+          ...this.startingEleven.midfielder,
+          ...this.startingEleven.attacker
+        ]
+        state.setState({
+          eleven,
+          subs: [...this.substitutes],
+          lineUp: [...eleven, ...this.substitutes].map(player => player.id)
+        })
       },
       updateTeam() {
         // Reset the arrays with null values
@@ -84,17 +169,17 @@ async function pitch(path) {
         }
 
         // Filter players by position
-        const goalkeepers = this.team.filter(
+        const goalkeepers = state.team.filter(
           player => player.position === 'Goalkeeper'
         )
-        const defenders = this.team.filter(
-          player => player.position === 'Defence'
+        const defenders = state.team.filter(
+          player => player.position === 'Defender'
         )
-        const midfielders = this.team.filter(
-          player => player.position === 'Midfield'
+        const midfielders = state.team.filter(
+          player => player.position === 'Midfielder'
         )
-        const forwards = this.team.filter(
-          player => player.position === 'Offence'
+        const forwards = state.team.filter(
+          player => player.position === 'Attacker'
         )
 
         // Fill the position arrays with the filtered players
@@ -102,11 +187,43 @@ async function pitch(path) {
         this.defenders = [...fillPosition(this.defenders, defenders, 5)]
         this.midfielders = [...fillPosition(this.midfielders, midfielders, 5)]
         this.forwards = [...fillPosition(this.forwards, forwards, 3)]
+        console.log(
+          'update team',
+          this.goalkeepers,
+          this.defenders,
+          this.midfielders,
+          this.forwards
+        )
       }
     },
     async created() {
-      this.updateTeam()
-      console.log('lineUp', constructLineUp(this.formation, this.team))
+      // this.updateTeam()
+      // state.setState({ping: 'pong'})
+
+      if (state.hasTeam) {
+        this.updateLineup()
+        // let lineup
+        // if (this.lineup.length == 0) {
+        //   lineup = constructLineUp(this.formation, this.team)
+        // } else {
+        //   lineup = this.lineup.map(player => {
+        //     return this.team.find(p => p.id == player)
+        //   })
+        //   lineup = constructLineUp(this.formation, lineup)
+        // }
+        // this.startingEleven = {
+        //   goalkeeper: lineup.get('goalkeepers'),
+        //   defender: lineup.get('defenders'),
+        //   midfielder: lineup.get('midfielders'),
+        //   attacker: lineup.get('attackers'),
+        //   position: ['attacker', 'midfielder', 'defender', 'goalkeeper']
+        // }
+        // this.substitutes = lineup.get('substitutes')
+        // console.log('subs', this.substitutes)
+        // console.log('lineup', this.startingEleven)
+      } else {
+        this.updateTeam()
+      }
     }
   })
 }

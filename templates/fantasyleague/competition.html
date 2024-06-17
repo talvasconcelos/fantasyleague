@@ -6,65 +6,106 @@
       <q-card-section>
         <div class="text-center">
           <h5>Fantasy League</h5>
-          <div v-if="!hasTeam">Choose your team...</div>
+          <div v-if="!state.hasTeam">Choose your team...</div>
         </div>
       </q-card-section>
       <q-card-section class="row flex-center q-col-gutter-md">
-        <div v-if="hasTeam" class="col-12 col-lg-6">
-          <!-- <q-select
-            filled
-            dense
-            v-model="formation"
-            :options="Object.keys(formations)"
-            label="Formation"
-          ></q-select> -->
+        <div v-if="state.hasTeam" class="col-12 col-lg-6">
           <div class="q-mt-md">
             <q-list bordered padding>
               <q-item-label header>Starting Eleven</q-item-label>
               <q-item
                 clickable
                 v-ripple
-                v-for="player in team"
+                v-for="player in eleven"
                 :key="player.id"
               >
-                <q-item-section
-                  ><span v-text="player.name"></span
-                ></q-item-section>
+                <q-item-section>
+                  <span v-text="player.name"></span>
+                </q-item-section>
                 <q-item-section avatar>
-                  <q-icon color="primary" name="bluetooth" />
+                  <q-avatar round>
+                    <img :src="player.photo" />
+                  </q-avatar>
+                </q-item-section>
+              </q-item>
+              <q-separator></q-separator>
+              <q-item-label header>Substitutes</q-item-label>
+              <q-item
+                clickable
+                v-ripple
+                v-for="player in subs"
+                :key="player.id"
+              >
+                <q-item-section>
+                  <span v-text="player.name"></span>
+                </q-item-section>
+                <q-item-section avatar>
+                  <q-avatar round>
+                    <img :src="player.photo" />
+                  </q-avatar>
                 </q-item-section>
               </q-item>
             </q-list>
           </div>
         </div>
-        <div :class="hasTeam ? 'col-12 col-lg-6':'col-12'">
-          <q-select
+        <div
+          :class="state.hasTeam ? 'col-12 col-lg-6':'col-12'"
+          style="
+            display: grid;
+            grid-template-rows: auto 1fr auto;
+            align-self: stretch;
+          "
+        >
+          <!-- <q-select
             filled
             v-model="formation"
-            :options="Object.keys(formations)"
+            :options="formations"
+            emit-value
             label="Formation"
             class="q-mb-md"
-          ></q-select>
+            @input="handleFormationChange"
+          ></q-select> -->
           <pitch
-            :pitch-src="pitchSrc"
-            :team="team"
-            :formation="formation"
-            :players="players"
-            :has-team="hasTeam"
             @add-player="addToTeam"
-            :line-up="lineUp"
+            @update-lineup="updateLineUp"
+            :team="state.team"
           ></pitch>
-          <q-btn
-            color="primary"
-            :label="hasTeam ? 'Update Team' : 'Save Team'"
-            @click="saveTeam"
-            :disable="team.length < 14"
-            class="q-mt-md"
-          ></q-btn>
+          <!-- <pitch
+            :team="state.team"
+            :formation="state.formation"
+            :lineup="state.lineUp"
+            :players="state.players"
+            :has-team="state.hasTeam"
+            @add-player="addToTeam"
+            @update-lineup="updateLineUp"
+          ></pitch> -->
+          <div>
+            <q-btn
+              v-if="!state.hasTeam"
+              color="primary"
+              label="Save Team"
+              @click="saveTeam"
+              :disable="state.team.length < 14"
+              class="q-mt-md"
+            ></q-btn>
+          </div>
         </div>
       </q-card-section>
+      <div class="absolute-top-left q-ma-sm">
+        <q-btn
+          type="a"
+          flat
+          round
+          color="primary"
+          icon="keyboard_arrow_left"
+          href="/fantasyleague"
+        >
+          <q-tooltip>Back</q-tooltip>
+        </q-btn>
+      </div>
     </q-card>
-    <q-card>
+    <q-card v-if="!state.hasTeam">
       <q-card-section>
         <div class="row items-center no-wrap q-mb-md">
           <div class="col">
@@ -80,7 +121,8 @@
           :pagination.sync="playersPagination"
           :rows-per-page-options="[0]"
           selection="multiple"
-          :selected.sync="team"
+          :selected.sync="selected"
+          @selection="selectedFn"
         >
           <template v-slot:top-left>
             <q-select
@@ -111,16 +153,21 @@
 </div>
 
 {% endblock %} {% block scripts %} {{ window_vars(user) }}
+<script src="{{ url_for('fantasyleague_static', path='js/store.js') }}"></script>
 <script>
   const participant = JSON.parse('{{ participant | tojson }}')
-  const league = JSON.parse('{{ league | tojson }}')
+  // const league = JSON.parse('{{ league | tojson }}')
   const team = JSON.parse('{{ team | tojson }}')
-  const pitchSrc =
-    '{{ url_for("fantasyleague_static", path="images/pitch.svg") }}'
-  console.log(pitchSrc)
+  // const $ = new StateStore({
+  //   participant,
+  //   league,
+  //   team
+  // })
+  // const unsubscribe = $.subscribe(newState => {
+  //   console.log('State changed:', newState)
+  // })
 </script>
 <script src="{{ url_for('fantasyleague_static', path='js/utils.js') }}"></script>
-<script src="{{ url_for('fantasyleague_static', path='js/tactics.js') }}"></script>
 
 <script src="{{ url_for('fantasyleague_static', path='components/pitch/pitch.js') }}"></script>
 <script src="{{ url_for('fantasyleague_static', path='components/pitch-player/pitch-player.js') }}"></script>
@@ -142,6 +189,7 @@
     perspective: 800px; */
     overflow: hidden;
   }
+
   .pitch-top {
     display: flex;
     justify-content: space-between;
@@ -150,6 +198,7 @@
     position: relative;
     height: inherit;
   }
+
   .pitch-top::before {
     content: '';
     position: absolute;
@@ -165,18 +214,8 @@
     width: 1152px;
     height: 500px;
     pointer-events: none;
-    /*
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-size: contain;
-    background-repeat: no-repeat;
-    background-image: url("{{ url_for('fantasyleague_static', path='images/pitch.svg') }}");
-    */
   }
+
   .pitch-row {
     align-items: center;
     justify-content: center;
@@ -185,6 +224,7 @@
     display: flex;
     min-height: 82px;
   }
+
   .pitch-player {
     text-align: center;
     display: flex;
@@ -194,15 +234,18 @@
     min-height: 90px;
     margin-right: 10px;
   }
+
   .pitch-player:last-child {
     margin-right: 0;
   }
+
   .pitch-player--wrapper {
     display: block;
     width: inherit;
     position: relative;
     margin: 0 auto;
   }
+
   .pitch-player--pos {
     background: var(--q-color-dark);
     border-radius: 4px;
@@ -216,25 +259,5 @@
     justify-content: center;
     align-items: center;
   }
-  /* .pitch > img {
-    position: absolute;
-    display: block;
-    transform-origin: bottom center;
-    transform: scale(1.41);
-    pointer-events: none;
-    bottom: -13%;
-    left: 5%;
-    width: 90%;
-    height: 76%;
-    user-select: none;
-  } */
-  /* .pitch > div {
-    height: 100%;
-    background: linear-gradient(
-      to bottom,
-      rgba(255, 255, 255, 0.2) 5%,
-      rgba(255, 255, 255, 0) 100%
-    );
-  } */
 </style>
 {% endblock %}

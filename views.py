@@ -1,3 +1,5 @@
+import json
+
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
 from lnbits.core.models import User
@@ -27,6 +29,7 @@ async def index(
     competitions = await get_active_leagues()
     wallet_ids = [wallet.id for wallet in user.wallets]
     user_competitions = await get_participant_competitions(wallet_ids)
+    logger.debug(f"User competitions: {user_competitions}")
     return template_renderer(["fantasyleague/templates"]).TemplateResponse(
         request,
         "fantasyleague/index.html",
@@ -67,6 +70,7 @@ async def competition(
 ):
     participant = await get_participant(participant_id)
     assert participant, "Participant not found"
+
     league = await get_league(participant.fantasyleague_id)
     assert league, "League not found"
     team = [p.dict() for p in await get_participant_team(participant_id)]

@@ -1,7 +1,10 @@
-from .crud import get_settings, get_participants, get_prize_distributions, get_league
-from lnbits.core.services import create_invoice, pay_invoice
-from .models import CreatePrizeDistribution, Participant
 from typing import List
+
+from httpx import get
+from lnbits.core.services import create_invoice, pay_invoice
+
+from .crud import get_league, get_participants, get_prize_distributions, get_settings
+from .models import CreatePrizeDistribution, Participant
 
 
 async def get_total_pool(league_id: str):
@@ -34,19 +37,24 @@ async def create_internal_payment(league_id, user_wallet, amount):
 
 async def pay_rewards_overall(league_id: str, winners: List[Participant]):
     total_pool = await get_total_pool(league_id)
-    settings = await get_settings()
-    assert settings, "Settings not found"
+    league = await get_league(league_id)
+    assert league, "League not found"
+
+    assert (
+        league.first_place and league.second_place and league.third_place
+    ), "Prize distribution not set"
 
     for idx, winner in enumerate(winners):
         amount = 0
         if idx == 0:
-            amount = int(total_pool * settings.first_prize)
+            amount = int(total_pool * league.first_place)
         elif idx == 1:
-            amount = int(total_pool * settings.second_prize)
+            amount = int(total_pool * league.second_place)
         else:
-            amount = int(total_pool * settings.third_prize)
+            amount = int(total_pool * league.third_place)
 
         await create_internal_payment(league_id, winner.wallet, amount)
+    return
 
 
 async def pay_weekly_reward(league_id: str, winner: Participant):

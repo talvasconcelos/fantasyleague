@@ -20,18 +20,25 @@ function loadTemplateAsync(path) {
 function constructLineUp(formation, team) {
   const formationArr = formation.split('-').map(Number)
   const goalkeepers = team.filter(player => player.position === 'Goalkeeper')
-  const defenders = team.filter(player => player.position === 'Defence')
-  const midfielders = team.filter(player => player.position === 'Midfield')
-  const forwards = team.filter(player => player.position === 'Offense')
+  const defenders = team.filter(player => player.position === 'Defender')
+  const midfielders = team.filter(player => player.position === 'Midfielder')
+  const forwards = team.filter(player => player.position === 'Attacker')
 
   const lineUp = new Map()
-  lineUp.set('formation', formation)
-  lineUp.set('goalkeepers', goalkeepers[0])
-  lineUp.set('defenders', defenders.slice(0, formationArr[1] - 1))
-  lineUp.set('midfielders', midfielders.slice(0, formationArr[2] - 1))
-  lineUp.set('forwards', forwards.slice(0, formationArr[3] - 1))
-
-  console.log(lineUp)
+  lineUp.set('goalkeepers', [goalkeepers[0]])
+  lineUp.set('defenders', defenders.slice(0, formationArr[0]))
+  lineUp.set('midfielders', midfielders.slice(0, formationArr[1]))
+  lineUp.set('attackers', forwards.slice(0, formationArr[2]))
+  lineUp.set(
+    'substitutes',
+    team.filter(
+      player =>
+        !lineUp.get('goalkeepers').includes(player) &&
+        !lineUp.get('defenders').includes(player) &&
+        !lineUp.get('midfielders').includes(player) &&
+        !lineUp.get('attackers').includes(player)
+    )
+  )
 
   return lineUp
 }

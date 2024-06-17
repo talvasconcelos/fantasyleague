@@ -7,7 +7,7 @@ async function settings(path) {
 
     data: function () {
       return {
-        footballdata_api_key: ''
+        footballdata_api_key: this.api_key || null
       }
     },
     methods: {

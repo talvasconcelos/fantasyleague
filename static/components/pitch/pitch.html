@@ -1,32 +1,49 @@
 <div>
+  <q-select
+    filled
+    v-model="formation"
+    :options="formations"
+    emit-value
+    label="Formation"
+    class="q-mb-md"
+    @input="handleFormationChange"
+  ></q-select>
   <div class="pitch">
     <div class="pitch-top">
-      <template v-if="hasTeam">
-        <div class="pitch-row" v-for="(row, index) in formationArr().reverse()">
+      <!-- Select lineup -->
+      <template v-if="state.hasTeam">
+        <div
+          class="pitch-row"
+          v-for="(row, index) in formationArr.reverse()"
+          :key="index"
+        >
           <pitch-player
             v-for="(p, i) in row"
-            :pos="index === 0 ? 'offence' : index === 1 ? 'midfield' : 'defence'"
-            :player="null"
-            :filtered-positions="filteredPositions"
-            @add-player="addPlayer"
+            :key="i"
+            :pos="startingEleven.position[index]"
+            :player="startingEleven[startingEleven.position[index]][i].id"
+            :filtered-positions="filteredLineup"
+            @add-player="addToLineup"
             :index="i"
           ></pitch-player>
         </div>
         <div class="pitch-row">
           <pitch-player
             :pos="'goalkeeper'"
-            :player="null"
-            :filtered-positions="filteredPositions"
-            @add-player="addPlayer"
+            :player="startingEleven.goalkeeper[0].id"
+            :filtered-positions="filteredLineup"
+            @add-player="addToLineup"
             :index="0"
           ></pitch-player>
         </div>
       </template>
+      <!-- Select team -->
       <template v-else>
         <div class="pitch-row">
           <template v-for="(p, i) in forwards">
             <pitch-player
-              :pos="'offence'"
+              :key="i"
+              :pos="'attacker'"
               :player="p"
               :filtered-positions="filteredPositions"
               @add-player="addPlayer"
@@ -37,7 +54,8 @@
         <div class="pitch-row">
           <template v-for="(p, i) in midfielders">
             <pitch-player
-              :pos="'midfield'"
+              :key="i"
+              :pos="'midfielder'"
               :player="p"
               :filtered-positions="filteredPositions"
               @add-player="addPlayer"
@@ -48,7 +66,8 @@
         <div class="pitch-row">
           <template v-for="(p, i) in defenders">
             <pitch-player
-              :pos="'defence'"
+              :key="i"
+              :pos="'defender'"
               :player="p"
               :filtered-positions="filteredPositions"
               @add-player="addPlayer"
@@ -59,6 +78,7 @@
         <div class="pitch-row">
           <template v-for="(p, i) in goalkeepers">
             <pitch-player
+              :key="i"
               :pos="'goalkeeper'"
               :player="p"
               :filtered-positions="filteredPositions"
@@ -70,4 +90,11 @@
       </template>
     </div>
   </div>
+  <q-btn
+    v-if="state.hasTeam"
+    color="primary"
+    label="Update Line Up"
+    @click="emitUpdateLineup"
+    class="q-mt-md"
+  ></q-btn>
 </div>

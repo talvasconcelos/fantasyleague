@@ -1,11 +1,6 @@
 <div class="pitch-player">
   <div class="pitch-player--wrapper">
-    <q-btn
-      round
-      unelevated
-      :color="activePlayer ? 'primary' : 'grey'"
-      :icon="activePlayer ? 'person' : 'person_add'"
-    >
+    <q-btn round unelevated :color="activePlayer ? 'primary' : 'grey'">
       <q-menu auto-close>
         <q-list>
           <q-item
@@ -18,6 +13,10 @@
           </q-item>
         </q-list>
       </q-menu>
+      <q-avatar v-if="activePlayer && activePlayer.photo">
+        <img :src="activePlayer.photo" class="q-pa-xs" />
+      </q-avatar>
+      <q-icon v-else :name="activePlayer ? 'person' : 'person_add'" />
     </q-btn>
     <div v-if="activePlayer">
       <q-chip square class="full-width"

@@ -127,6 +127,20 @@ async def update_league(league_id: str, **kwargs) -> FantasyLeague:
     return FantasyLeague(**row)
 
 
+async def delete_league(league_id: str):
+    # delete all participants, players and league
+    await db.execute(
+        "DELETE FROM fantasyleague.participants WHERE fantasyleague_id = ?",
+        (league_id,),
+    )
+    await db.execute(
+        "DELETE FROM fantasyleague.players WHERE league_id = ?", (league_id,)
+    )
+    await db.execute(
+        "DELETE FROM fantasyleague.competitions WHERE id = ?", (league_id,)
+    )
+
+
 ## PARTICIPANTS
 
 
@@ -215,9 +229,11 @@ async def update_participant_formation(participant_id: str, formation: str):
 
 
 async def update_participant_lineup(participant_id: str, lineup: LineUp):
+    # convert lineup list to a string of comma-separated values
+    string_lineup = ",".join(lineup.lineup)
     await db.execute(
         "UPDATE fantasyleague.participants SET lineup = ? WHERE id = ?",
-        (json.dumps(lineup), participant_id),
+        (string_lineup, participant_id),
     )
     return
 
@@ -281,9 +297,27 @@ async def get_players_by_league(league_id: str) -> List[Player]:
     return [Player(**row) for row in rows]
 
 
+async def update_league_players(league_id: str, data: PlayersBulk):
+    # add new players if they don't exist
+    # (API may not have all players when creating a league, so we need to update them later)
+    players = await get_players_by_league(league_id)
+    player_ids = [player.api_id for player in players]
+    new_players = [player for player in data.players if player.api_id not in player_ids]
+    if new_players:
+        await create_players_bulk(PlayersBulk(players=new_players))
+    return
+
+
 async def get_player(player_id: str) -> Optional[Player]:
     row = await db.fetchone(
         "SELECT * FROM fantasyleague.players WHERE id = ?", (player_id,)
+    )
+    return Player(**row) if row else None
+
+
+async def get_player_by_api_id(api_id: str) -> Optional[Player]:
+    row = await db.fetchone(
+        "SELECT * FROM fantasyleague.players WHERE api_id = ?", (api_id,)
     )
     return Player(**row) if row else None
 
@@ -297,13 +331,9 @@ async def get_players(player_ids: List[str]) -> List[Player]:
 
 
 async def update_player_points(player_id: str, points: int):
-    player = await get_player(player_id)
-    if not player:
-        return
-    player.points += points
     await db.execute(
-        "UPDATE fantasyleague.players SET points = ? WHERE id = ?",
-        (player.points, player_id),
+        "UPDATE fantasyleague.players SET points = points + ? WHERE api_id = ?",
+        (points, player_id),
     )
     return
 

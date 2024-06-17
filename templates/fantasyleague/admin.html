@@ -11,7 +11,7 @@
               unelevated
               color="primary"
               label="New Competition"
-              @click="competitionDialog.show = true"
+              @click="openCompetitionDialog"
             >
               <q-tooltip v-if="api_key">
                 Create a new Fantasy League
@@ -44,7 +44,55 @@
           row-key="id"
           selection="single"
           :selected.sync="selectedLeague"
-        ></q-table>
+        >
+          <template v-slot:header="props">
+            <q-tr :props="props">
+              <q-th auto-width></q-th>
+              <q-th v-for="col in props.cols" :key="col.name" :props="props">
+                ${ col.label }
+              </q-th>
+              <q-th auto-width></q-th>
+            </q-tr>
+          </template>
+          <template v-slot:body="props">
+            <q-tr :props="props">
+              <q-td auto-width>
+                <q-btn
+                  size="sm"
+                  color="accent"
+                  round
+                  dense
+                  @click="props.expand = !props.expand"
+                  :icon="props.expand ? 'expand_less' : 'expand_more'"
+                />
+              </q-td>
+              <q-td v-for="col in props.cols" :key="col.name" :props="props">
+                ${ col.value }
+              </q-td>
+              <q-td auto-width>
+                <q-btn
+                  flat
+                  dense
+                  size="sm"
+                  @click="deleteCompetition(props.row.id)"
+                  icon="cancel"
+                  color="pink"
+                ></q-btn>
+              </q-td>
+            </q-tr>
+            <q-tr v-show="props.expand" :props="props">
+              <q-td colspan="100%">
+                <div class="q-my-md">
+                  <q-btn
+                    color="primary"
+                    label="Refresh Players"
+                    @click="refreshPlayers(props.row.id)"
+                  ></q-btn>
+                </div>
+              </q-td>
+            </q-tr>
+          </template>
+        </q-table>
       </q-card-section>
     </q-card>
   </div>

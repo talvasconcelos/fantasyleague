@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 
 from loguru import logger
 
-from .api_football import get_matches, get_player_stats_by_match
+from .api_football import get_matches, get_player_stats_by_match, get_round
 from .crud import (
     get_active_leagues,
     get_participant_team,
@@ -59,28 +59,27 @@ class FantasyLeagueScheduler:
                 season=league.season,
             )
             logger.debug(f"Matches: {matches}")
-            if matches is None:
+            if matches is None or len(matches) == 0:
                 logger.info("Not all matches played yet.")
                 continue
 
             statistics = await get_player_stats_by_match(self.api_key, matches)
-
             points = await self.calculate_points(statistics)
             player_ids = list(points.keys())
             await self.update_participants_total_points(player_ids)
             await self.check_competitions(league)
-            logger.info("Updating league matchday...")
-            await update_league(league.id, matchday=league.matchday + 1)
+            # logger.info("Updating league matchday...")
+            # await update_league(league.id, matchday=league.matchday + 1)
 
     async def fetch_data(self, competition, matchday: str, season: int):
         # Replace with actual function to fetch data from the API
         logger.info("Fetching matches from API...")
         return await get_matches(self.api_key, competition, season, matchday)
 
-    async def calculate_points(self, matches):
+    async def calculate_points(self, stats):
         # Replace with actual function to calculate player points
         logger.info("Calculating player points...")
-        points = calculate_player_points(matches)
+        points = calculate_player_points(stats)
         for player_id, score in points.items():
             # Update player points in the database
             await update_player_points(player_id, score)
@@ -111,6 +110,15 @@ class FantasyLeagueScheduler:
             ]
             await pay_rewards_overall(league.id, winners)
         else:
+            # Upddate matchday
+            matchday = await get_round(
+                self.api_key, league.competition_code, league.season, current=False
+            )
+            # matchday is a list of matchaday strings, check if there's a matchday next to the current one
+            # get index of current matchday, add 1 to get next matchday
+            next_matchday = matchday[matchday.index(league.matchday) + 1] or matchday[0]
+            await update_league(league.id, matchday=next_matchday)
+
             logger.info("League still running.")
 
     async def stop(self):

@@ -9,7 +9,13 @@ from lnbits.decorators import WalletTypeInfo, check_admin, require_admin_key
 from loguru import logger
 from tests import api
 
-from .api_football import get_competitions, get_league_players, get_round
+from .api_football import (
+    get_competitions,
+    get_league_players,
+    get_round,
+    get_team_players,
+    get_teams,
+)
 from .crud import (
     create_league,
     create_participant,
@@ -17,6 +23,7 @@ from .crud import (
     create_players_bulk,
     create_prize_distribution,
     create_settings,
+    delete_league,
     get_active_leagues,
     get_league,
     get_leagues,
@@ -29,6 +36,7 @@ from .crud import (
     get_prize_distributions,
     get_settings,
     update_league,
+    update_league_players,
     update_participant_formation,
     update_participant_lineup,
     update_participant_team,
@@ -133,10 +141,16 @@ async def api_create_league(
     assert api_key, "Please add your API key first."
     try:
         matchday = await get_round(api_key.api_key, data.competition_code, data.season)
-        data.matchday = matchday
+        data.matchday = matchday[0]
         league = await create_league(data)
         assert league
         # season = league.season_start.split("-")[0]
+        # teams = await get_teams(
+        #     api_key=api_key.api_key,
+        #     competition_code=league.competition_code,
+        #     season=league.season,
+        # )
+
         players = [
             CreatePlayer(**player)
             for player in await get_league_players(
@@ -146,6 +160,14 @@ async def api_create_league(
                 season=league.season,
             )
         ]
+        # players = [
+        #     CreatePlayer(**player)
+        #     for player in await get_team_players(
+        #         api_key=api_key.api_key,
+        #         team_ids=[team["team"]["id"] for team in teams],
+        #         league_id=league.id,
+        #     )
+        # ]
         await create_players_bulk(PlayersBulk(players=players))
         return league.dict()
     except Exception as e:
@@ -172,6 +194,21 @@ async def api_update_league(
         )
     league = await update_league(league_id, **data.dict())
     return league.dict()
+
+
+@fantasyleague_ext_api.delete(
+    "/competition/{league_id}", description="Delete a Fantasy League"
+)
+async def api_delete_league(
+    league_id: str, wallet: WalletTypeInfo = Depends(require_admin_key)
+):
+    league = await get_league(league_id)
+    if not league:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND, detail="Fantasy League not found."
+        )
+    await delete_league(league_id)
+    return "", HTTPStatus.NO_CONTENT
 
 
 ## PARTICIPANTS
@@ -294,6 +331,7 @@ async def api_update_participant_team(
 async def api_update_participant_lineup(
     participant_id: str,
     data: LineUp,
+    formation: str = Query(None),
     wallet: WalletTypeInfo = Depends(require_admin_key),
 ):
     participant = await get_participant(participant_id)
@@ -309,6 +347,9 @@ async def api_update_participant_lineup(
         raise HTTPException(
             status_code=HTTPStatus.NOT_FOUND, detail="Fantasy League not found."
         )
+    if formation:
+        await update_participant_formation(participant_id, formation)
+
     await update_participant_lineup(participant_id, data)
 
 
@@ -330,3 +371,44 @@ async def api_get_player(player_id: str):
             status_code=HTTPStatus.NOT_FOUND, detail="Player not found."
         )
     return player.dict()
+
+
+@fantasyleague_ext_api.get(
+    "/competition/{league_id}/players/update",
+    description="Update players",
+    dependencies=[Depends(check_admin)],
+)
+async def api_update_league_players(
+    league_id: str, wallet: WalletTypeInfo = Depends(require_admin_key)
+):
+    league = await get_league(league_id)
+    if not league:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND, detail="Fantasy League not found."
+        )
+    api_key = await get_settings()
+    assert api_key, "Please add your API key first."
+    teams = await get_teams(
+        api_key=api_key.api_key,
+        competition_code=league.competition_code,
+        season=league.season,
+    )
+    players = [
+        CreatePlayer(**player)
+        for player in await get_team_players(
+            api_key=api_key.api_key,
+            team_ids=[team["team"]["id"] for team in teams],
+            league_id=league.id,
+        )
+    ]
+    # players = [
+    #     CreatePlayer(**player)
+    #     for player in await get_league_players(
+    #         api_key=api_key.api_key,
+    #         league_id=league.id,
+    #         competition_code=league.competition_code,
+    #         season=league.season,
+    #     )
+    # ]
+    await update_league_players(league_id, PlayersBulk(players=players))
+    return {"message": "Players updated."}

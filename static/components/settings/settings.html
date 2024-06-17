@@ -3,49 +3,23 @@
     <div class="row no-wrap q-pa-md" style="max-width: max-content">
       <div class="column">
         <div class="text-h6 q-mb-md">API settings</div>
-        <q-input
-          class="q-mb-md"
-          style="width: 350px"
-          filled
-          dense
-          v-model.trim="footballdata_api_key"
-          label="API Key"
-          hint="football-data.org API key"
-        >
+        <q-input class="q-mb-md" style="width: 350px" filled dense v-model.trim="api_key" label="API Key"
+          hint="api-football.com API key">
         </q-input>
       </div>
 
       <q-separator vertical inset class="q-mx-lg" />
 
       <div class="column items-center">
-        <q-avatar
-          square
-          color="black"
-          size="72px"
-          style="display: flex; align-items: center"
-        >
-          <img
-            style="height: auto; width: 100%"
-            src="https://www.football-data.org/assets/logo.jpg"
-          />
+        <q-avatar square color="black" size="72px" style="display: flex; align-items: center">
+          <img style="height: auto; width: 100%" src="https://www.api-football.com/public/img/home1/hero-banner.png" />
         </q-avatar>
 
         <div class="text-subtitle1 q-my-md">
-          <a
-            href="https://www.football-data.org/"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="text-primary"
-            >Open free account</a
-          >
+          <a href="https://dashboard.api-football.com/register" target="_blank" rel="noopener noreferrer"
+            class="text-primary">Open free account</a>
         </div>
-        <q-btn
-          class="q-mt-auto"
-          color="primary"
-          label="Save"
-          @click="emitSettings"
-          v-close-popup
-        />
+        <q-btn class="q-mt-auto" color="primary" label="Save" @click="emitSettings" v-close-popup />
       </div>
     </div>
   </q-btn-dropdown>

@@ -9,8 +9,12 @@
         filled
         dense
         emit-value
+        fill-input
+        input-debounce="0"
+        @filter="filterCompetitions"
         v-model="competitionDialog.data.competition_code"
         :options="competitionOptions"
+        :display-value="displayCompetition"
         label="Competition *"
       >
         <template v-slot:option="scope">
@@ -142,7 +146,7 @@
         </q-expansion-item>
       </q-list>
       <div class="row q-mt-lg">
-        <q-btn unelevated color="primary" type="submit"
+        <q-btn :loading="loading" unelevated color="primary" type="submit"
           >Create Competition</q-btn
         >
         <q-btn
