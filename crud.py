@@ -73,7 +73,7 @@ async def get_league(league_id: str) -> Optional[FantasyLeague]:
 
 async def get_active_leagues():
     rows = await db.fetchall(
-        "SELECT * FROM fantasyleague.competitions WHERE has_ended = 0"
+        "SELECT * FROM fantasyleague.competitions WHERE has_ended = false"
     )
     return [FantasyLeague(**row) for row in rows]
 
