@@ -77,7 +77,7 @@ async def m001_initial(db):
     await db.execute(
         f"""
         CREATE TABLE prize_distributions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id {db.serial_primary_key},
             league_id TEXT,
             participant_id TEXT,
             prize_type TEXT,
