@@ -20,8 +20,8 @@
           <pitch-player
             v-for="(p, i) in row"
             :key="i"
-            :pos="startingEleven.position[index]"
-            :player="startingEleven[startingEleven.position[index]][i].id"
+            :pos="position[index]"
+            :player="startingEleven[position[index]][i].id"
             :filtered-positions="filteredLineup"
             @add-player="addToLineup"
             :index="i"

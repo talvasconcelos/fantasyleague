@@ -81,18 +81,22 @@ const competitionPage = async () => {
           'GET',
           `/fantasyleague/api/v1/competition/${state.participant.fantasyleague_id}/players`
         )
-        // this.players = [...data]
         state.updateState('players', [...data])
       },
       selectedFn(details) {
-        console.log('Selected:', details)
-        state.updateState('team', [...state.team, ...details.rows])
+        const teamMap = new Map(state.team.map(player => [player.id, player]))
+        if (teamMap.has(details.keys[0])) {
+          teamMap.delete(details.keys[0])
+        } else {
+          teamMap.set(details.keys[0], details.rows[0])
+        }
+        state.updateState('team', [...teamMap.values()])
       },
       addToTeam(team) {
-        console.log('Add to team:', team)
         state.team = team.map(player => {
           return state.players.find(p => p.id == player)
         })
+        this.selected = state.team
       },
       async saveTeam() {
         if (state.hasTeam) return await this.updateTeam()
@@ -109,9 +113,9 @@ const competitionPage = async () => {
               team: state.team.map(player => player.id)
             }
           )
-          if (data) {
-            state.hasTeam = true
-          }
+          console.log(data)
+          state.updateState('hasTeam', true)
+
         } catch (error) {
           console.log(error)
         }
@@ -170,16 +174,7 @@ const competitionPage = async () => {
         console.log('State changed:', newState)
       })
       this.formation = state.formation
-      // this.participant = participant
 
-      // this.team = team
-      // if (this.team.length > 0) {
-      //   this.hasTeam = true
-      // }
-      // this.formation = this.participant.formation || '4-4-2'
-      // this.lineUp = this.participant.lineup
-      // .map(id => this.team.find(player => player.id == id))
-      // .filter(player => player)
       await this.getLeaguePlayers()
     }
   })

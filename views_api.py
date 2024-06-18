@@ -1,6 +1,6 @@
 from http import HTTPStatus
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, Query
 from fastapi.exceptions import HTTPException
 from lnbits.core.crud import get_user
 from lnbits.core.services import create_invoice
@@ -151,15 +151,15 @@ async def api_create_league(
         #     season=league.season,
         # )
 
-        players = [
-            CreatePlayer(**player)
-            for player in await get_league_players(
-                api_key=api_key.api_key,
-                league_id=league.id,
-                competition_code=league.competition_code,
-                season=league.season,
-            )
-        ]
+        # players = [
+        #     CreatePlayer(**player)
+        #     for player in await get_league_players(
+        #         api_key=api_key.api_key,
+        #         league_id=league.id,
+        #         competition_code=league.competition_code,
+        #         season=league.season,
+        #     )
+        # ]
         # players = [
         #     CreatePlayer(**player)
         #     for player in await get_team_players(
@@ -168,7 +168,8 @@ async def api_create_league(
         #         league_id=league.id,
         #     )
         # ]
-        await create_players_bulk(PlayersBulk(players=players))
+        # await create_players_bulk(PlayersBulk(players=players))
+        await api_update_league_players(league.id, wallet.wallet.adminkey)
         return league.dict()
     except Exception as e:
         raise HTTPException(

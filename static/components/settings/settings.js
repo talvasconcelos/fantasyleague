@@ -2,12 +2,12 @@ async function settings(path) {
   const template = await loadTemplateAsync(path)
   Vue.component('settings', {
     name: 'settings',
-    props: ['save-settings', 'api_key'],
+    props: ['save-settings', 'apikey'],
     template,
 
     data: function () {
       return {
-        footballdata_api_key: this.api_key || null
+        footballdata_api_key: null
       }
     },
     methods: {
@@ -19,7 +19,7 @@ async function settings(path) {
       }
     },
     async created() {
-      this.footballdata_api_key = this.api_key
+      this.footballdata_api_key = this.apikey
     }
   })
 }

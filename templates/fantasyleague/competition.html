@@ -51,11 +51,7 @@
         </div>
         <div
           :class="state.hasTeam ? 'col-12 col-lg-6':'col-12'"
-          style="
-            display: grid;
-            grid-template-rows: auto 1fr auto;
-            align-self: stretch;
-          "
+          class="pitch-wrapper"
         >
           <!-- <q-select
             filled
@@ -175,6 +171,11 @@
 <script src="{{ url_for('fantasyleague_static', path='js/competition.js') }}"></script>
 
 <style scoped>
+  .pitch-wrapper {
+    display: block;
+    
+  }
+  
   .pitch {
     position: relative;
     width: 100%;
@@ -230,9 +231,9 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 88px;
+    width: 75px;
     min-height: 90px;
-    margin-right: 10px;
+    margin-right: 6px;
   }
 
   .pitch-player:last-child {
@@ -258,6 +259,17 @@
     padding: 3px 15px;
     justify-content: center;
     align-items: center;
+  }
+  @media (min-width: 600px) {
+    .pitch-wrapper {
+      display: grid;
+    grid-template-rows: auto 1fr auto;
+    align-self: stretch;
+    }
+    .pitch-player {
+    width: 88px;
+    margin-right: 10px;
+  }
   }
 </style>
 {% endblock %}

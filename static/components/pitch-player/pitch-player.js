@@ -3,7 +3,7 @@ async function pitchPlayer(path) {
 
   Vue.component('pitch-player', {
     name: 'pitch-player',
-    props: ['pos', 'filtered-positions', 'index', 'player'],
+    props: ['pos', 'filtered-positions', 'index', 'player', 'ping'],
     template,
 
     watch: {
@@ -15,7 +15,7 @@ async function pitchPlayer(path) {
 
     data() {
       return {
-        activePlayer: null
+        activePlayer: null,
       }
     },
     computed: {
@@ -36,6 +36,7 @@ async function pitchPlayer(path) {
       }
     },
     async created() {
+      console.log('player', state.getState())
       this.updatePlayer()
     }
   })
