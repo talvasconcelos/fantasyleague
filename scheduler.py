@@ -9,6 +9,7 @@ from .crud import (
     get_participant_team,
     get_participants,
     get_participants_by_players,
+    get_players_by_api_id,
     get_settings,
     update_league,
     update_participant_points,
@@ -66,7 +67,8 @@ class FantasyLeagueScheduler:
             statistics = await get_player_stats_by_match(self.api_key, matches)
             points = await self.calculate_points(statistics)
             player_ids = list(points.keys())
-            await self.update_participants_total_points(player_ids)
+            players = await get_players_by_api_id(player_ids)
+            await self.update_participants_total_points([player.id for player in players])
             await self.check_competitions(league)
             # logger.info("Updating league matchday...")
             # await update_league(league.id, matchday=league.matchday + 1)
@@ -85,7 +87,7 @@ class FantasyLeagueScheduler:
             await update_player_points(player_id, score)
         return points
 
-    async def update_participants_total_points(self, player_ids: list):
+    async def update_participants_total_points(self, player_ids: list[str]):
         # Replace with actual function to update participants' total points
         logger.info("Updating participants' total points...")
         participants = await get_participants_by_players(player_ids)
