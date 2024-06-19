@@ -36,7 +36,6 @@ async function pitchPlayer(path) {
       }
     },
     async created() {
-      console.log('player', state.getState())
       this.updatePlayer()
     }
   })

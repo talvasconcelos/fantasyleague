@@ -321,7 +321,7 @@ async def get_player_by_api_id(api_id: str) -> Optional[Player]:
     )
     return Player(**row) if row else None
 
-async def get_players_by_api_id(api_ids: List[str]) -> List[Player]:
+async def get_players_by_api_id(api_ids: List[int]) -> List[Player]:
     rows = await db.fetchall(
         "SELECT * FROM fantasyleague.players WHERE api_id IN (?)", (api_ids,)
     )

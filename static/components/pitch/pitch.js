@@ -6,12 +6,12 @@ async function pitch(path) {
     props: ['team'],
     template,
 
-    // watch: {
-    //   immediate: true,
-    //   team() {
-    //     this.updateTeam()
-    //   }
-    // },
+    watch: {
+      immediate: true,
+      team() {
+        this.updateTeam()
+      }
+    },
 
     data: function () {
       return {
@@ -99,6 +99,7 @@ async function pitch(path) {
         this.updateLineup()
       },
       addPlayer(player, idx, pos) {
+        console.log('add player')
         switch (pos) {
           case 'goalkeeper':
             this.goalkeepers[idx] = player
@@ -172,7 +173,9 @@ async function pitch(path) {
         console.log('starting', this.startingEleven)
       },
       updateTeam() {
-        // Reset the arrays with null values
+        if(state.hasTeam) return
+        // console.log('update team', this.team)
+        // // Reset the arrays with null values
         this.goalkeepers.fill(null)
         this.defenders.fill(null)
         this.midfielders.fill(null)
@@ -214,7 +217,7 @@ async function pitch(path) {
           this.midfielders,
           this.forwards
         )
-        // this.updateLineup()
+        //this.updateLineup()
       }
     },
     async created() {

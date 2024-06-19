@@ -1,5 +1,3 @@
-import json
-
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
 from lnbits.core.models import User
@@ -73,6 +71,9 @@ async def competition(
 
     league = await get_league(participant.fantasyleague_id)
     assert league, "League not found"
+    # TESTING TO DELETE
+    logger.debug(f"League prize pool: {league.total_prize_pool}")
+    logger.debug(f"League prizes: {league.prize_distribution}")
     team = [p.dict() for p in await get_participant_team(participant_id)]
     return template_renderer(["fantasyleague/templates"]).TemplateResponse(
         request,

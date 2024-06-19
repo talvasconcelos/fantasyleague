@@ -32,7 +32,8 @@ const competitionPage = async () => {
           // {label: 'ID', align: 'left', field: 'id'},
           {label: 'Name', align: 'left', field: 'name'},
           {label: 'Position', align: 'left', field: 'position', sortable: true},
-          {label: 'Team', align: 'left', field: 'team', sortable: true}
+          { label: 'Team', align: 'left', field: 'team', sortable: true },
+          {label: 'Points', align: 'left', field: 'points', sortable: true}
         ],
         playersPagination: {
           rowsPerPage: 0
