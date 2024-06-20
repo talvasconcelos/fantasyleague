@@ -21,7 +21,7 @@ from .services import pay_rewards_overall
 
 
 class FantasyLeagueScheduler:
-    def __init__(self, interval_hours=12):
+    def __init__(self, interval_hours=6):
         self.interval_hours = interval_hours
         self.now = datetime.now(timezone.utc)
         self.next_run_time = self.now + timedelta(hours=self.interval_hours)
@@ -37,8 +37,8 @@ class FantasyLeagueScheduler:
                 if self.now >= self.next_run_time:
                     self.next_run_time = self.now + timedelta(hours=self.interval_hours)
                     await self.collect_and_process_data()
-                # await asyncio.sleep(60 * 5)  # Testing
-                await asyncio.sleep(60 * 60 * 4)  # Check every 4 hours
+                # await asyncio.sleep(60 * 15)  # Testing
+                await asyncio.sleep(60 * 60 * 2)  # Check every 2 hour
             except Exception as ex:
                 logger.warning(ex)
                 await asyncio.sleep(60)  # Wait a bit before retrying
@@ -67,7 +67,9 @@ class FantasyLeagueScheduler:
             statistics = await get_player_stats_by_match(self.api_key, matches)
             points = await self.calculate_points(statistics)
             player_ids = list(points.keys())
+            # logger.debug(f"Player IDs: {player_ids}")
             players = await get_players_by_api_id(player_ids)
+            # logger.debug(f"Players: {players}")
             await self.update_participants_total_points([player.id for player in players])
             await self.check_competitions(league)
             # logger.info("Updating league matchday...")
@@ -82,6 +84,7 @@ class FantasyLeagueScheduler:
         # Replace with actual function to calculate player points
         logger.info("Calculating player points...")
         points = calculate_player_points(stats)
+        logger.debug(f"Points: {points}")
         for player_id, score in points.items():
             # Update player points in the database
             await update_player_points(player_id, score)
@@ -96,6 +99,38 @@ class FantasyLeagueScheduler:
             total_points = sum([player.points for player in participant_team])
             await update_participant_points(participant.id, points=total_points)
 
+    # async def check_competitions(self, league: FantasyLeague):
+    #     # Replace with actual function to check if competitions are over and distribute prizes
+    #     logger.info("Checking competitions and distributing prizes...")
+    #     participants = await get_participants(league.id)
+    #     league_type = league.competition_type
+
+    #     if league.season_end < self.now.strftime("%Y-%m-%d"):
+    #         # league has ended
+    #         await update_league(league.id, has_ended=True)
+    #         logger.info("League has ended.")
+    #         # distribute prizes
+    #         winners = sorted(participants, key=lambda x: x.total_points, reverse=True)[
+    #             :3
+    #         ]
+    #         await pay_rewards_overall(league.id, winners)
+    #     else:
+    #         # Upddate matchday
+    #         matchday = await get_round(
+    #             self.api_key, league.competition_code, league.season, current=False
+    #         )
+    #         logger.debug(f"Matchday: {matchday}")
+    #         # matchday is a list of matchaday strings, check if there's a matchday next to the current one
+    #         # get index of current matchday, add 1 to get next matchday
+    #         next_matchday = matchday[matchday.index(league.matchday) + 1] or matchday[0]
+    #         logger.debug(f"Next matchday: {next_matchday}")
+    #         await update_league(league.id, matchday=next_matchday)
+
+    #         if(league_type == "Cup"):
+    #             is_group_stage = next_matchday.startswith("Group")
+
+
+    #         logger.info("League still running.")
     async def check_competitions(self, league: FantasyLeague):
         # Replace with actual function to check if competitions are over and distribute prizes
         logger.info("Checking competitions and distributing prizes...")
@@ -107,22 +142,64 @@ class FantasyLeagueScheduler:
             await update_league(league.id, has_ended=True)
             logger.info("League has ended.")
             # distribute prizes
-            winners = sorted(participants, key=lambda x: x.total_points, reverse=True)[
-                :3
-            ]
+            winners = sorted(participants, key=lambda x: x.total_points, reverse=True)[:3]
             await pay_rewards_overall(league.id, winners)
         else:
-            # Upddate matchday
-            matchday = await get_round(
-                self.api_key, league.competition_code, league.season, current=False
-            )
-            # matchday is a list of matchaday strings, check if there's a matchday next to the current one
-            # get index of current matchday, add 1 to get next matchday
-            next_matchday = matchday[matchday.index(league.matchday) + 1] or matchday[0]
-            await update_league(league.id, matchday=next_matchday)
+            # Update matchday
+            matchday = await get_round(self.api_key, league.competition_code, league.season, current=False)
+            logger.debug(f"Matchday: {matchday}")
+            
+            # matchday is a list of matchday strings, check if there's a matchday next to the current one
+            try:
+                current_index = matchday.index(league.matchday)
+                next_matchday_index = current_index + 1
+                next_matchday = matchday[next_matchday_index] if next_matchday_index < len(matchday) else None
+            except ValueError:
+                logger.error("Current matchday not found in matchdays list.")
+                return
+            except IndexError:
+                next_matchday = None
+            
+            if next_matchday:
+                logger.debug(f"Next matchday: {next_matchday}")
+                await update_league(league.id, matchday=next_matchday)
+
+                if league_type == "Cup":
+                    is_group_stage = next_matchday.startswith("Group")
+                    remaining_group_stages = any(md.startswith("Group") for md in matchday[next_matchday_index + 1:])
+
+                    if is_group_stage and not remaining_group_stages:
+                        logger.info("End of group stage reached.")
+                        # Distribute group stage rewards
+                        group_stage_winner = sorted(participants, key=lambda x: x.total_points, reverse=True)[0]
+                        logger.debug(f"Group stage winner: {group_stage_winner}")
+                        # await pay_group_stage_rewards(league.id, group_stage_winners)
+                    elif is_group_stage and remaining_group_stages:
+                        logger.debug("Group stage not ended yet.")
+                        # Do nothing, waiting for the end of the group stages
+                        pass
+                    else:
+                        # This is for Cup competitions that are not in the group stage
+                        logger.info("Cup competition outside of group stage.")
+                        # Distribute regular matchday rewards
+                        matchday_winner = sorted(participants, key=lambda x: x.total_points, reverse=True)[0]
+                        logger.debug(f"Matchday winner: {matchday_winner}")
+                        # await pay_matchday_rewards(league.id, matchday_winners)
+                else:
+                    # Regular league: Distribute matchday rewards
+                    matchday_winner = sorted(participants, key=lambda x: x.total_points, reverse=True)[0]
+                    logger.debug(f"Matchday winner: {matchday_winner}")
+                    # await pay_matchday_rewards(league.id, matchday_winners)
+
+                logger.info("League still running.")
+            else:
+                logger.warning("No next matchday found. The league may have completed all known matchdays.")
+                return
 
             logger.info("League still running.")
 
     async def stop(self):
         self.running = False
         logger.info("FantasyLeagueScheduler stopped.")
+
+# [1145517, 1189848]
