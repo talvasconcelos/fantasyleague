@@ -32,7 +32,7 @@ const competitionPage = async () => {
           // {label: 'ID', align: 'left', field: 'id'},
           {label: 'Name', align: 'left', field: 'name'},
           {label: 'Position', align: 'left', field: 'position', sortable: true},
-          { label: 'Team', align: 'left', field: 'team', sortable: true },
+          {label: 'Team', align: 'left', field: 'team', sortable: true},
           {label: 'Points', align: 'left', field: 'points', sortable: true}
         ],
         playersPagination: {
@@ -114,9 +114,7 @@ const competitionPage = async () => {
               team: state.team.map(player => player.id)
             }
           )
-          console.log(data)
           state.updateState('hasTeam', true)
-
         } catch (error) {
           console.log(error)
         }
@@ -164,6 +162,8 @@ const competitionPage = async () => {
       state.setState({
         participant,
         team,
+        startingEleven: {},
+        substitutes: [],
         formation: participant.formation || '4-4-2',
         lineUp: participant.lineup ? participant.lineup.split(',') : []
       })
@@ -173,6 +173,7 @@ const competitionPage = async () => {
 
       const unsubscribe = state.subscribe(newState => {
         console.log('State changed:', newState)
+        // this.$forceUpdate()
       })
       this.formation = state.formation
 

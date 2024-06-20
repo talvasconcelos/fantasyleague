@@ -206,7 +206,7 @@ async def get_participant_team(participant_id: str) -> List[Player]:
     return await get_players(player_ids)
 
 
-async def get_participants_by_players(player_ids: List[int]) -> List[Participant]:
+async def get_participants_by_players(player_ids: List[str]) -> List[Participant]:
     q = ",".join(["?"] * len(player_ids))
     rows = await db.fetchall(
         f"""

@@ -14,14 +14,14 @@
       <template v-if="state.hasTeam">
         <div
           class="pitch-row"
-          v-for="(row, index) in formationArr.reverse()"
+          v-for="(row, index) in [...formationArr].reverse()"
           :key="index"
         >
           <pitch-player
             v-for="(p, i) in row"
             :key="i"
             :pos="position[index]"
-            :player="startingEleven[position[index]][i].id"
+            :player="state.startingEleven[position[index]][i].id"
             :filtered-positions="filteredLineup"
             @add-player="addToLineup"
             :index="i"
@@ -30,7 +30,7 @@
         <div class="pitch-row">
           <pitch-player
             :pos="'goalkeeper'"
-            :player="startingEleven.goalkeeper[0].id"
+            :player="state.startingEleven.goalkeeper[0].id"
             :filtered-positions="filteredLineup"
             @add-player="addToLineup"
             :index="0"

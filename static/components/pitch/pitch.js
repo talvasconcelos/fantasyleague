@@ -40,7 +40,7 @@ async function pitch(path) {
         )
         if (menu) {
           playerList = playerList.filter(
-            player => !this.startingEleven[position].includes(player)
+            player => !state.startingEleven[position].includes(player)
           )
         }
         return playerList
@@ -60,31 +60,30 @@ async function pitch(path) {
         this.updateLineup()
       },
       addToLineup(player_id, idx, pos) {
+        // replace player in state.startingEleven with player with player_id
+        // add replaced player to state.substitutes
+
+        const {goalkeeper, defender, midfielder, attacker} =
+          state.startingEleven
+        const subs = [...state.substitutes]
+
         const player = state.team.find(p => p.id == player_id)
-        const replacing = this.startingEleven[pos][idx]
-        const { goalkeeper, defender, midfielder, attacker } = this.startingEleven
-        const subs = [...this.substitutes, replacing]
+        const replacing = state.startingEleven[pos][idx]
+
+        subs.splice(subs.indexOf(player), 1, replacing)
+
         switch (pos) {
           case 'goalkeeper':
-            // subs = [...subs, replacing]
             goalkeeper[idx] = player
-            // this.substitutes.push(this.startingEleven.goalkeeper[idx])
-            // this.startingEleven.goalkeeper[idx] = player
             break
           case 'defender':
             defender[idx] = player
-            // this.substitutes.push(this.startingEleven.defender[idx])
-            // this.startingEleven.defender[idx] = player
             break
           case 'midfielder':
             midfielder[idx] = player
-            // this.substitutes.push(this.startingEleven.midfielder[idx])
-            // this.startingEleven.midfielder[idx] = player
             break
-          case 'attacker':
+          default:
             attacker[idx] = player
-            // this.substitutes.push(this.startingEleven.attacker[idx])
-            // this.startingEleven.attacker[idx] = player
             break
         }
 
@@ -95,7 +94,9 @@ async function pitch(path) {
           ...attacker,
           ...subs
         ].map(player => player.id)
+        console.log('lineup', lineup)
         state.updateState('lineUp', lineup)
+
         this.updateLineup()
       },
       addPlayer(player, idx, pos) {
@@ -138,42 +139,29 @@ async function pitch(path) {
           })
         }
         let lineup = constructLineUp(state.formation, team)
-        // if (state.lineUp.length == 0) {
-        //   lineup = constructLineUp(state.formation, state.team)
-        // } else {
-        //   // order the team array by the lineup array
-        //   let team = [...state.lineUp].sort((a, b) => {
-        //     return state.lineUp.indexOf(a) - state.lineUp.indexOf(b)
-        //   })
-        //   // let team = state.lineUp.map(player => {
-        //   //   return state.team.find(p => p.id == player)
-        //   // })
-        //   lineup = constructLineUp(state.formation, team)
-        // }
-        this.startingEleven = {
+
+        state.updateState('startingEleven', {
           goalkeeper: lineup.get('goalkeepers'),
           defender: lineup.get('defenders'),
           midfielder: lineup.get('midfielders'),
-          attacker: lineup.get('attackers'),
-          // position: ['attacker', 'midfielder', 'defender', 'goalkeeper']
-        }
+          attacker: lineup.get('attackers')
+        })
+        state.updateState('substitutes', lineup.get('substitutes'))
 
-        this.substitutes = lineup.get('substitutes')
-        eleven = [
-          ...this.startingEleven.goalkeeper,
-          ...this.startingEleven.defender,
-          ...this.startingEleven.midfielder,
-          ...this.startingEleven.attacker
+        const eleven = [
+          ...state.startingEleven.goalkeeper,
+          ...state.startingEleven.defender,
+          ...state.startingEleven.midfielder,
+          ...state.startingEleven.attacker
         ]
         state.setState({
           eleven,
-          subs: [...this.substitutes],
-          lineUp: [...eleven, ...this.substitutes].map(player => player.id)
+          subs: [...state.substitutes],
+          lineUp: [...eleven, ...state.substitutes].map(player => player.id)
         })
-        console.log('starting', this.startingEleven)
       },
       updateTeam() {
-        if(state.hasTeam) return
+        if (state.hasTeam) return
         // console.log('update team', this.team)
         // // Reset the arrays with null values
         this.goalkeepers.fill(null)
@@ -221,31 +209,8 @@ async function pitch(path) {
       }
     },
     async created() {
-      // this.updateTeam()
-      // state.setState({ping: 'pong'})
-      console.log('created pitch', state.lineUp)
       if (state.hasTeam) {
-        state.setState({ startingEleven: {}, substitutes: [] })
         this.updateLineup()
-        // let lineup
-        // if (this.lineup.length == 0) {
-        //   lineup = constructLineUp(this.formation, this.team)
-        // } else {
-        //   lineup = this.lineup.map(player => {
-        //     return this.team.find(p => p.id == player)
-        //   })
-        //   lineup = constructLineUp(this.formation, lineup)
-        // }
-        // this.startingEleven = {
-        //   goalkeeper: lineup.get('goalkeepers'),
-        //   defender: lineup.get('defenders'),
-        //   midfielder: lineup.get('midfielders'),
-        //   attacker: lineup.get('attackers'),
-        //   position: ['attacker', 'midfielder', 'defender', 'goalkeeper']
-        // }
-        // this.substitutes = lineup.get('substitutes')
-        // console.log('subs', this.substitutes)
-        // console.log('lineup', this.startingEleven)
       } else {
         this.updateTeam()
       }
