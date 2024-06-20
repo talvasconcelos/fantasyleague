@@ -2,104 +2,145 @@
 %} {% block page %}
 <div class="row q-col-gutter-md">
   <div class="col-12 q-gutter-y-md">
+    <q-tabs
+      v-model="tab"
+      class="text-grey"
+      active-color="primary"
+      indicator-color="primary"
+      align="justify"
+      narrow-indicator
+    >
+      <q-tab name="team" label="Team"></q-tab>
+      <q-tab name="transfers" label="Transfers"></q-tab>
+      <q-tab name="board" label="Leader Board"></q-tab>
+    </q-tabs>
     <q-card>
-      <q-card-section>
-        <div class="text-center">
-          <h5>Fantasy League</h5>
-          <div v-if="!state.hasTeam">Choose your team...</div>
-        </div>
-      </q-card-section>
-      <q-card-section class="row flex-center q-col-gutter-md">
-        <div v-if="state.hasTeam" class="col-12 col-lg-6">
-          <div class="q-mt-md">
-            <q-list bordered padding>
-              <q-item-label header>Starting Eleven</q-item-label>
-              <q-item
-                clickable
-                v-ripple
-                v-for="player in eleven"
-                :key="player.id"
-              >
-                <q-item-section top avatar>
-                  <q-avatar round>
-                    <img :src="player.photo" />
-                  </q-avatar>
-                </q-item-section>
-                <q-item-section>
-                  <q-item-label
-                    ><span v-text="player.name"></span
-                  ></q-item-label>
-                  <q-item-label caption
-                    ><span v-text="player.position"></span
-                  ></q-item-label>
-                </q-item-section>
-                <q-item-section side top>
-                  <q-badge :label="player.points"></q-badge>
-                </q-item-section>
-              </q-item>
-              <q-separator></q-separator>
-              <q-item-label header>Substitutes</q-item-label>
-              <q-item
-                clickable
-                v-ripple
-                v-for="player in subs"
-                :key="player.id"
-              >
-                <q-item-section top avatar>
-                  <q-avatar round>
-                    <img :src="player.photo" />
-                  </q-avatar>
-                </q-item-section>
-                <q-item-section>
-                  <q-item-label
-                    ><span v-text="player.name"></span
-                  ></q-item-label>
-                  <q-item-label caption
-                    ><span v-text="player.position"></span
-                  ></q-item-label>
-                </q-item-section>
-                <q-item-section side top>
-                  <q-badge :label="player.points"></q-badge>
-                </q-item-section>
-              </q-item>
-            </q-list>
-          </div>
-        </div>
-        <div
-          :class="state.hasTeam ? 'col-12 col-lg-6':'col-12'"
-          class="pitch-wrapper"
-        >
-          <pitch
-            @add-player="addToTeam"
-            @update-lineup="updateLineUp"
-            :team="state.team"
-          ></pitch>
-          <div>
+      <q-tab-panels v-model="tab" animated>
+        <!-- TEAM -->
+        <q-tab-panel name="team">
+          <q-card-section>
+            <div class="text-center">
+              <h5>Fantasy League</h5>
+              <div v-if="!state.hasTeam">Choose your team...</div>
+            </div>
+          </q-card-section>
+          <q-card-section class="row flex-center q-col-gutter-md">
+            <div v-if="state.hasTeam" class="col-12 col-lg-6">
+              <div class="q-mt-md">
+                <q-list bordered padding>
+                  <q-item-label header>Starting Eleven</q-item-label>
+                  <q-item
+                    clickable
+                    v-ripple
+                    v-for="player in eleven"
+                    :key="player.id"
+                  >
+                    <q-item-section top avatar>
+                      <q-avatar round>
+                        <img :src="player.photo" />
+                      </q-avatar>
+                    </q-item-section>
+                    <q-item-section>
+                      <q-item-label
+                        ><span v-text="player.name"></span
+                      ></q-item-label>
+                      <q-item-label caption
+                        ><span v-text="player.position"></span
+                      ></q-item-label>
+                    </q-item-section>
+                    <q-item-section side top>
+                      <q-badge :label="player.points"></q-badge>
+                    </q-item-section>
+                  </q-item>
+                  <q-separator></q-separator>
+                  <q-item-label header>Substitutes</q-item-label>
+                  <q-item
+                    clickable
+                    v-ripple
+                    v-for="player in subs"
+                    :key="player.id"
+                  >
+                    <q-item-section top avatar>
+                      <q-avatar round>
+                        <img :src="player.photo" />
+                      </q-avatar>
+                    </q-item-section>
+                    <q-item-section>
+                      <q-item-label
+                        ><span v-text="player.name"></span
+                      ></q-item-label>
+                      <q-item-label caption
+                        ><span v-text="player.position"></span
+                      ></q-item-label>
+                    </q-item-section>
+                    <q-item-section side top>
+                      <q-badge :label="player.points"></q-badge>
+                    </q-item-section>
+                  </q-item>
+                </q-list>
+              </div>
+            </div>
+            <div
+              :class="state.hasTeam ? 'col-12 col-lg-6':'col-12'"
+              class="pitch-wrapper"
+            >
+              <pitch
+                @add-player="addToTeam"
+                @update-lineup="updateLineUp"
+                :team="state.team"
+              ></pitch>
+              <div>
+                <q-btn
+                  v-if="!state.hasTeam"
+                  color="primary"
+                  label="Save Team"
+                  @click="saveTeam"
+                  :disable="state.team.length < 14"
+                  class="q-mt-md"
+                ></q-btn>
+              </div>
+            </div>
+          </q-card-section>
+          <div class="absolute-top-left q-ma-sm">
             <q-btn
-              v-if="!state.hasTeam"
+              type="a"
+              flat
+              round
               color="primary"
-              label="Save Team"
-              @click="saveTeam"
-              :disable="state.team.length < 14"
-              class="q-mt-md"
-            ></q-btn>
+              icon="keyboard_arrow_left"
+              href="/fantasyleague"
+            >
+              <q-tooltip>Back</q-tooltip>
+            </q-btn>
           </div>
-        </div>
-      </q-card-section>
-      <div class="absolute-top-left q-ma-sm">
-        <q-btn
-          type="a"
-          flat
-          round
-          color="primary"
-          icon="keyboard_arrow_left"
-          href="/fantasyleague"
-        >
-          <q-tooltip>Back</q-tooltip>
-        </q-btn>
-      </div>
+        </q-tab-panel>
+        <!-- TRANSFERS -->
+        <q-tab-panel name="transfers">
+          <div class="text-h6">Coming soon...</div>
+        </q-tab-panel>
+        <!-- LEADER BOARD -->
+        <q-tab-panel name="board">
+          <div class="q-pa-md">
+            <q-table
+              title="Leader Board"
+              :data="board"
+              :columns="boardColumns"
+              row-key="name"
+            >
+              <template v-slot:body-cell="props">
+                <q-td :props="props">
+                  <span
+                    :class="props.row.name == state.participant.name ? 'text-weight-bold' : ''"
+                    v-text="props.value"
+                  ></span>
+                </q-td>
+              </template>
+            </q-table>
+          </div>
+        </q-tab-panel>
+      </q-tab-panels>
     </q-card>
-    <q-card v-if="!state.hasTeam">
+    <q-card v-if="!state.hasTeam && tab == 'team'">
       <q-card-section>
         <div class="row items-center no-wrap q-mb-md">
           <div class="col">
@@ -150,8 +191,9 @@
 <script src="{{ url_for('fantasyleague_static', path='js/store.js') }}"></script>
 <script>
   const participant = JSON.parse('{{ participant | tojson }}')
-  // const league = JSON.parse('{{ league | tojson }}')
+  const board = JSON.parse('{{ board | tojson }}')
   const team = JSON.parse('{{ team | tojson }}')
+  console.log('board', board)
   // const $ = new StateStore({
   //   participant,
   //   league,

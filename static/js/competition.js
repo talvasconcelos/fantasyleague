@@ -46,6 +46,18 @@ const competitionPage = async () => {
           'Defender',
           'Midfielder',
           'Attacker'
+        ],
+        tab: 'team',
+        board: [],
+        boardColumns: [
+          {label: 'Name', align: 'left', field: 'name'},
+          {label: 'Formation', align: 'left', field: 'formation'},
+          {
+            label: 'Points',
+            align: 'left',
+            field: 'total_points',
+            sortable: true
+          }
         ]
       }
     },
@@ -172,10 +184,11 @@ const competitionPage = async () => {
       }
 
       const unsubscribe = state.subscribe(newState => {
-        console.log('State changed:', newState)
+        //console.log('State changed:', newState)
         // this.$forceUpdate()
       })
       this.formation = state.formation
+      this.board = board
 
       await this.getLeaguePlayers()
     }

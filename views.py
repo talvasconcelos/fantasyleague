@@ -11,7 +11,7 @@ from .crud import (
     get_participant,
     get_participant_competitions,
     get_participant_team,
-    get_settings,
+    get_participants,
 )
 
 fantasyleague_ext_generic = APIRouter(tags=["fantasyleague"])
@@ -71,6 +71,16 @@ async def competition(
 
     league = await get_league(participant.fantasyleague_id)
     assert league, "League not found"
+
+    participants = await get_participants(participant.fantasyleague_id)
+    assert participants, "Participants not found"
+
+    board = [{
+        "name": p.name,
+        "total_points": p.total_points,
+        "formation": p.formation,
+    } for p in participants]
+
     # TESTING TO DELETE
     logger.debug(f"League prize pool: {league.total_prize_pool}")
     logger.debug(f"League prizes: {league.prize_distribution}")
@@ -81,7 +91,7 @@ async def competition(
         {
             "user": user.dict(),
             "participant": participant.dict(),
-            "league": league.dict(),
+            "board": board,
             "team": team,
         },
     )
