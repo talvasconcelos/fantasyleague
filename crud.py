@@ -256,7 +256,7 @@ async def update_participant_lineup(participant_id: str, lineup: LineUp):
 
 async def update_participant_points(participant_id: str, points: int):
     await db.execute(
-        "UPDATE fantasyleague.participants SET total_points = ? WHERE id = ?",
+        "UPDATE fantasyleague.participants SET total_points = total_points + ? WHERE id = ?",
         (points, participant_id),
     )
     return

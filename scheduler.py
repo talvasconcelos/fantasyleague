@@ -16,7 +16,7 @@ from .crud import (
     update_player_points,
 )
 from .helpers import calculate_player_points
-from .models import FantasyLeague
+from .models import FantasyLeague, Player
 from .services import pay_matchday_reward, pay_rewards_overall
 
 
@@ -31,6 +31,7 @@ class FantasyLeagueScheduler:
     async def run_forever(self):
         logger.debug("FantasyLeagueScheduler started.")
         self.running = True
+        await self.collect_and_process_data()
         while self.running:
             try:
                 self.now = datetime.now(timezone.utc)
@@ -71,7 +72,7 @@ class FantasyLeagueScheduler:
             # logger.debug(f"Player IDs: {player_ids}")
             players = await get_players_by_api_id(player_ids)
             # logger.debug(f"Players: {players}")
-            await self.update_participants_total_points([player.id for player in players])
+            await self.update_participants_total_points(players, points)
             await self.check_competitions(league)
             # logger.info("Updating league matchday...")
             # await update_league(league.id, matchday=league.matchday + 1)
@@ -87,18 +88,34 @@ class FantasyLeagueScheduler:
         points = calculate_player_points(stats)
         logger.debug(f"Points: {points}")
         for player_id, score in points.items():
-            # Update player points in the database
+            # Update player points in the database (cumulative points for the season)
             await update_player_points(player_id, score)
         return points
 
-    async def update_participants_total_points(self, player_ids: list[str]):
+    async def update_participants_total_points(self, players: list[Player], points):
         # Replace with actual function to update participants' total points
         logger.info("Updating participants' total points...")
-        participants = await get_participants_by_players(player_ids)
+        participants = await get_participants_by_players([player.id for player in players])
         for participant in participants:
-            participant_team = await get_participant_team(participant.id)
-            total_points = sum([player.points for player in participant_team])
+            # Only players in the lineup's starting eleven are considered for points
+            participant_lineup = participant.lineup.split(",")[:-4]
+            participant_team = [player for player in players if player.id in participant_lineup]
+            
+            # Sum the points of all players in the participant's lineup, for the current matchday
+            total_points = sum([points[player.api_id] for player in participant_team])
+            logger.info(f"Participant {participant.id} total points: {total_points}")
+            
+            # Update the participant's total points (cumulative points for the season)
             await update_participant_points(participant.id, points=total_points)
+
+    # async def update_participants_total_points(self, player_ids: list[str], points):
+    #     # Replace with actual function to update participants' total points
+    #     logger.info("Updating participants' total points...")
+    #     participants = await get_participants_by_players(player_ids)
+    #     for participant in participants:
+    #         participant_team = await get_participant_team(participant.id)
+    #         total_points = sum([player.points for player in participant_team])
+    #         await update_participant_points(participant.id, points=total_points)
 
     # async def check_competitions(self, league: FantasyLeague):
     #     # Replace with actual function to check if competitions are over and distribute prizes

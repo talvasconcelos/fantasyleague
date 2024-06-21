@@ -303,7 +303,7 @@ async def api_create_participant_team(
         )
     await create_participant_team(participant_id, data.team)
     await update_participant_formation(participant_id, data.formation)
-    return {"message": "Team created."}
+    return await get_participant(participant_id)
 
 
 @fantasyleague_ext_api.put("/participants/{participant_id}/team")
@@ -327,6 +327,7 @@ async def api_update_participant_team(
         )
     await update_participant_team(participant_id, data.team)
     await update_participant_formation(participant_id, data.formation)
+    return await get_participant(participant_id)
 
 
 @fantasyleague_ext_api.put("/participants/{participant_id}/lineup")
@@ -353,6 +354,7 @@ async def api_update_participant_lineup(
         await update_participant_formation(participant_id, formation)
 
     await update_participant_lineup(participant_id, data)
+    return await get_participant(participant_id)
 
 
 ## PLAYERS

@@ -127,7 +127,6 @@ async function pitch(path) {
         // })
       },
       emitUpdateLineup() {
-        console.log('emit update lineup', state.getState())
         this.$emit('update-lineup')
         // this.updateLineup()
       },

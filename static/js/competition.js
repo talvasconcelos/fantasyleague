@@ -181,8 +181,21 @@ const competitionPage = async () => {
               team: state.team.map(player => player.id)
             }
           )
-          if (data.message) {
-            state.updateState('hasTeam', true)
+          if (data) {
+            state.setState({
+              hasTeam: true,
+              participant: data,
+              formation: data.formation,
+              lineUp: data.lineup ? data.lineup.split(',') : []
+            })
+            this.$q.notify({
+              message: 'Team saved successfully',
+              color: 'positive',
+              position: 'bottom'
+            })
+            if (!data.lineup) {
+              this.updateLineUp()
+            }
           }
           return
         } catch (error) {
@@ -223,6 +236,18 @@ const competitionPage = async () => {
               lineup: state.lineUp
             }
           )
+          if (data) {
+            state.setState({
+              participant: data,
+              formation: data.formation,
+              lineUp: data.lineup.split(',')
+            })
+            this.$q.notify({
+              message: 'Lineup saved successfully',
+              color: 'positive',
+              position: 'bottom'
+            })
+          }
         } catch (error) {
           console.log(error)
         }

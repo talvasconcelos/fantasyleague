@@ -95,6 +95,7 @@
     color="primary"
     label="Update Line Up"
     @click="emitUpdateLineup"
+    :disable="state.lineUp == state.participant.lineup"
     class="q-mt-md"
   ></q-btn>
 </div>
