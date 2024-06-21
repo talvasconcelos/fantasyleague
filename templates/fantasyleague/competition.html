@@ -200,15 +200,6 @@
   const participant = JSON.parse('{{ participant | tojson }}')
   const board = JSON.parse('{{ board | tojson }}')
   const team = JSON.parse('{{ team | tojson }}')
-  console.log('board', board)
-  // const $ = new StateStore({
-  //   participant,
-  //   league,
-  //   team
-  // })
-  // const unsubscribe = $.subscribe(newState => {
-  //   console.log('State changed:', newState)
-  // })
 </script>
 <script src="{{ url_for('fantasyleague_static', path='js/utils.js') }}"></script>
 
