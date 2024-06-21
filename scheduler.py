@@ -98,6 +98,10 @@ class FantasyLeagueScheduler:
         participants = await get_participants_by_players([player.id for player in players])
         for participant in participants:
             # Only players in the lineup's starting eleven are considered for points
+                        
+            if not participant.lineup:
+                logger.warning(f"Participant {participant.id} has no lineup.")
+                continue
             participant_lineup = participant.lineup.split(",")[:-4]
             participant_team = [player for player in players if player.id in participant_lineup]
             
