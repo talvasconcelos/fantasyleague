@@ -43,7 +43,7 @@ class FantasyLeague(CreateFantasyLeague):
         return (self.buy_in - fee_value) * self.num_participants
 
     @property
-    def prize_distribution(self) -> tuple[float, float]:
+    def prize_distribution(self) -> tuple[int, int]:
         final = floor(self.total_prize_pool * 0.75)
         matchday = floor(self.total_prize_pool * 0.25)
         return (final, matchday)

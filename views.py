@@ -91,7 +91,6 @@ async def competition(
         {
             "user": user.dict(),
             "participant": participant.dict(),
-            # "board": sorted(board, key=lambda x: x["total_points"], reverse=True),
             "board": board,
             "team": team,
         },

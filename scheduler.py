@@ -17,12 +17,13 @@ from .crud import (
 )
 from .helpers import calculate_player_points
 from .models import FantasyLeague
-from .services import pay_rewards_overall
+from .services import pay_matchday_reward, pay_rewards_overall
 
 
 class FantasyLeagueScheduler:
     def __init__(self, interval_hours=6):
         self.interval_hours = interval_hours
+        # self.interval_hours = 1 #interval_hours
         self.now = datetime.now(timezone.utc)
         self.next_run_time = self.now + timedelta(hours=self.interval_hours)
         self.running = False
@@ -173,6 +174,7 @@ class FantasyLeagueScheduler:
                         # Distribute group stage rewards
                         group_stage_winner = sorted(participants, key=lambda x: x.total_points, reverse=True)[0]
                         logger.debug(f"Group stage winner: {group_stage_winner}")
+                        await pay_matchday_reward(league.id, group_stage_winner, "group_stage_winner")
                         # await pay_group_stage_rewards(league.id, group_stage_winners)
                     elif is_group_stage and remaining_group_stages:
                         logger.debug("Group stage not ended yet.")
@@ -184,11 +186,13 @@ class FantasyLeagueScheduler:
                         # Distribute regular matchday rewards
                         matchday_winner = sorted(participants, key=lambda x: x.total_points, reverse=True)[0]
                         logger.debug(f"Matchday winner: {matchday_winner}")
+                        await pay_matchday_reward(league.id, matchday_winner, f"{league.matchday} winner")
                         # await pay_matchday_rewards(league.id, matchday_winners)
                 else:
                     # Regular league: Distribute matchday rewards
                     matchday_winner = sorted(participants, key=lambda x: x.total_points, reverse=True)[0]
                     logger.debug(f"Matchday winner: {matchday_winner}")
+                    await pay_matchday_reward(league.id, matchday_winner)
                     # await pay_matchday_rewards(league.id, matchday_winners)
 
                 logger.info("League still running.")
