@@ -30,10 +30,28 @@ const competitionPage = async () => {
         selected: [],
         playersColumns: [
           // {label: 'ID', align: 'left', field: 'id'},
-          {label: 'Name', align: 'left', field: 'name'},
-          {label: 'Position', align: 'left', field: 'position', sortable: true},
-          {label: 'Team', align: 'left', field: 'team', sortable: true},
-          {label: 'Points', align: 'left', field: 'points', sortable: true}
+          {name: 'name', label: 'Name', align: 'left', field: 'name'},
+          {
+            name: 'posittion',
+            label: 'Position',
+            align: 'left',
+            field: 'position',
+            sortable: true
+          },
+          {
+            name: 'team',
+            label: 'Team',
+            align: 'left',
+            field: 'team',
+            sortable: true
+          },
+          {
+            name: 'points',
+            label: 'Points',
+            align: 'left',
+            field: 'points',
+            sortable: true
+          }
         ],
         playersPagination: {
           rowsPerPage: 0
@@ -48,17 +66,27 @@ const competitionPage = async () => {
           'Attacker'
         ],
         tab: 'team',
-        board: [],
-        boardColumns: [
-          {label: 'Name', align: 'left', field: 'name'},
-          {label: 'Formation', align: 'left', field: 'formation'},
-          {
-            label: 'Points',
-            align: 'left',
-            field: 'total_points',
-            sortable: true
+        leaderBoard: [],
+        boardColumns: {
+          columns: [
+            {label: 'Name', align: 'left', field: 'name'},
+            {label: 'Formation', align: 'left', field: 'formation'},
+            {
+              name: 'total_points',
+              label: 'Points',
+              align: 'left',
+              field: 'total_points',
+              sortable: true
+            }
+          ],
+          pagination: {
+            sortBy: 'total_points',
+            rowsPerPage: 20,
+            page: 1,
+            descending: true,
+            rowsNumber: 10
           }
-        ]
+        }
       }
     },
     watch: {},
@@ -96,6 +124,33 @@ const competitionPage = async () => {
         )
         state.updateState('players', [...data])
       },
+      pickRandomTeam() {
+        // pick 15 random players (2 goalkeepers, 5 defenders, 5 midfielders, 3 attackers)
+
+        const players = state.players
+        const goalkeepers = players.filter(
+          player => player.position === 'Goalkeeper'
+        )
+        const defenders = players.filter(
+          player => player.position === 'Defender'
+        )
+        const midfielders = players.filter(
+          player => player.position === 'Midfielder'
+        )
+        const attackers = players.filter(
+          player => player.position === 'Attacker'
+        )
+
+        const team = [
+          ..._.sample(goalkeepers, 2),
+          ..._.sample(defenders, 5),
+          ..._.sample(midfielders, 5),
+          ..._.sample(attackers, 3)
+        ]
+
+        state.updateState('team', team)
+        this.selected = state.team
+      },
       selectedFn(details) {
         const teamMap = new Map(state.team.map(player => [player.id, player]))
         if (teamMap.has(details.keys[0])) {
@@ -126,7 +181,10 @@ const competitionPage = async () => {
               team: state.team.map(player => player.id)
             }
           )
-          state.updateState('hasTeam', true)
+          if (data.message) {
+            state.updateState('hasTeam', true)
+          }
+          return
         } catch (error) {
           console.log(error)
         }
@@ -174,6 +232,7 @@ const competitionPage = async () => {
       state.setState({
         participant,
         team,
+        hasTeam: false,
         startingEleven: {},
         substitutes: [],
         formation: participant.formation || '4-4-2',
@@ -183,12 +242,12 @@ const competitionPage = async () => {
         state.hasTeam = true
       }
 
-      const unsubscribe = state.subscribe(newState => {
-        //console.log('State changed:', newState)
-        // this.$forceUpdate()
-      })
+      // const unsubscribe = state.subscribe(newState => {
+      //   //console.log('State changed:', newState)
+      //   // this.$forceUpdate()
+      // })
       this.formation = state.formation
-      this.board = board
+      this.leaderBoard = board.sort((a, b) => b.total_points - a.total_points)
 
       await this.getLeaguePlayers()
     }

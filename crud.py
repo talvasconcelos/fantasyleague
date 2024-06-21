@@ -188,20 +188,25 @@ async def create_participant(data: CreateParticipant) -> Participant:
 
     participants = await get_participants(data.fantasyleague_id)
 
-    # get a median value of the total points of all participants
+    # get a median value, or average, of the total points of all participants
     # to set the new participant's total points to the median value
     # this is to prevent new participants from having an unfair disadvantage
-
+    points = 0
     total_points = [participant.total_points for participant in participants]
-    total_points.sort()
-    median_points = total_points[len(total_points) // 2] if len(total_points) > 0 else 0
+    
+    if(len(total_points) < 5):
+        # calculate average points
+        points = sum(total_points) // len(total_points) if len(total_points) > 0 else 0
+    else:
+        total_points.sort()
+        points = total_points[len(total_points) // 2]
 
     await db.execute(
         """
         INSERT INTO fantasyleague.participants (id, fantasyleague_id, wallet, name, total_points)
         VALUES (?, ?, ?, ?, ?)
         """,
-        (participant_id, data.fantasyleague_id, data.wallet, data.name, median_points),
+        (participant_id, data.fantasyleague_id, data.wallet, data.name, points),
     )
     participant = await get_participant(participant_id)
     assert participant, "Newly created participant couldn't be retrieved"

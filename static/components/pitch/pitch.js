@@ -132,6 +132,7 @@ async function pitch(path) {
         // this.updateLineup()
       },
       updateLineup() {
+        if (state.team.length < 15) return
         let team = [...state.team]
         if (state.lineUp.length > 0) {
           team = state.lineUp.map(player => {
@@ -205,7 +206,7 @@ async function pitch(path) {
           this.midfielders,
           this.forwards
         )
-        //this.updateLineup()
+        this.updateLineup()
       }
     },
     async created() {
