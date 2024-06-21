@@ -43,7 +43,8 @@ class FantasyLeagueScheduler:
                 await asyncio.sleep(60 * 60 * 2)  # Check every 2 hour
             except Exception as ex:
                 logger.warning(ex)
-                await asyncio.sleep(60)  # Wait a bit before retrying
+                # await asyncio.sleep(60)  # Wait a bit before retrying
+                continue
 
     async def collect_and_process_data(self):
         api_key = await get_settings()
@@ -96,6 +97,7 @@ class FantasyLeagueScheduler:
         # Replace with actual function to update participants' total points
         logger.info("Updating participants' total points...")
         participants = await get_participants_by_players([player.id for player in players])
+        logger.debug(f"Participants: {participants}")
         for participant in participants:
             # Only players in the lineup's starting eleven are considered for points
                         

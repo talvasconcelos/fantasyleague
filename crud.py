@@ -226,7 +226,7 @@ async def get_participants_by_players(player_ids: List[str]) -> List[Participant
     q = ",".join(["?"] * len(player_ids))
     rows = await db.fetchall(
         f"""
-        SELECT p.*
+        SELECT DISTINCT p.*
         FROM fantasyleague.participants p
         JOIN fantasyleague.participant_players pp ON p.id = pp.participant_id
         WHERE pp.player_id IN ({q})
