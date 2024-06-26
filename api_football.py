@@ -21,6 +21,10 @@ def _get_headers(api_key: str):
 def _get_sleep_time(response: httpx.Response):
     rate_limit = int(response.headers.get("X-RateLimit-Limit", 10))
     remaining = int(response.headers.get("X-RateLimit-Remaining", 0))
+    r = response.json()
+    if r["paging"]["total"] < 6 and remaining > 0:
+        return 0
+    
     if remaining == 0:
         cool_off_seconds = 60  # Cool off for one minute
         logger.debug(f"Rate limit reached. Cooling off for {cool_off_seconds} seconds.")
@@ -145,10 +149,29 @@ async def get_matches(api_key: str, competition_code: str, season: int, matchday
             match["fixture"]["status"]["short"] in ["FT", "AET", "PEN", "PST", "CANC"]
             for match in r["response"]
         )
+
         logger.debug(f"All matches played: {all_matches_played}")
         if not all_matches_played:
-            return None
+            return []
+
         return [match["fixture"]["id"] for match in r["response"]]
+    except httpx.HTTPStatusError as exc:
+        return exc.response.json()
+
+async def get_first_match(api_key: str, competition_code: str, season: int, matchday: str):
+    client = httpx.AsyncClient(base_url=BASE_URL, headers=_get_headers(api_key))
+
+    try:
+        response = await client.get(
+            f"fixtures?league={competition_code}&season={season}&round={matchday}"
+        )
+        r = response.json()
+
+        # Get the start time of the first fixture
+        first_fixture = min(r["response"], key=lambda x: x['fixture']['timestamp'])
+        first_fixture_start = int(first_fixture['fixture']['timestamp'])
+
+        return first_fixture_start
     except httpx.HTTPStatusError as exc:
         return exc.response.json()
 

@@ -84,6 +84,7 @@ async def competition(
     # TESTING TO DELETE
     logger.debug(f"League prize pool: {league.total_prize_pool}")
     logger.debug(f"League prizes: {league.prize_distribution}")
+    logger.debug(f"League transfer window: {league.transfer_window_close}")
     team = [p.dict() for p in await get_participant_team(participant_id)]
     return template_renderer(["fantasyleague/templates"]).TemplateResponse(
         request,
@@ -93,5 +94,6 @@ async def competition(
             "participant": participant.dict(),
             "board": board,
             "team": team,
+            "transfer_window": league.transfer_window_close,
         },
     )

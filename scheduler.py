@@ -3,17 +3,25 @@ from datetime import datetime, timedelta, timezone
 
 from loguru import logger
 
-from .api_football import get_matches, get_player_stats_by_match, get_round
+from .api_football import (
+    get_first_match,
+    get_matches,
+    get_player_stats_by_match,
+    get_round,
+)
 from .crud import (
     get_active_leagues,
+    get_free_transfers_participants,
     get_participant_team,
     get_participants,
     get_participants_by_players,
     get_players_by_api_id,
     get_settings,
+    reset_free_transfers,
     update_league,
     update_participant_points,
     update_player_points,
+    update_transfer_window,
 )
 from .helpers import calculate_player_points
 from .models import FantasyLeague, Player
@@ -63,7 +71,7 @@ class FantasyLeagueScheduler:
                 season=league.season,
             )
             logger.debug(f"Matches: {matches}")
-            if matches is None or len(matches) == 0:
+            if len(matches) == 0:
                 logger.info("Not all matches played yet.")
                 continue
 
@@ -114,47 +122,17 @@ class FantasyLeagueScheduler:
             # Update the participant's total points (cumulative points for the season)
             await update_participant_points(participant.id, points=total_points)
 
-    # async def update_participants_total_points(self, player_ids: list[str], points):
-    #     # Replace with actual function to update participants' total points
-    #     logger.info("Updating participants' total points...")
-    #     participants = await get_participants_by_players(player_ids)
-    #     for participant in participants:
-    #         participant_team = await get_participant_team(participant.id)
-    #         total_points = sum([player.points for player in participant_team])
-    #         await update_participant_points(participant.id, points=total_points)
+    async def reset_free_transfers(self, league_id: str):
+        participants = await get_participants(league_id)
+        for participant in participants:
+            await reset_free_transfers(participant.id)
+        # free_transfers = await get_free_transfers_participants([participant.id for participant in participants])
+        # for ft in free_transfers:
+            
 
-    # async def check_competitions(self, league: FantasyLeague):
-    #     # Replace with actual function to check if competitions are over and distribute prizes
-    #     logger.info("Checking competitions and distributing prizes...")
-    #     participants = await get_participants(league.id)
-    #     league_type = league.competition_type
+            
 
-    #     if league.season_end < self.now.strftime("%Y-%m-%d"):
-    #         # league has ended
-    #         await update_league(league.id, has_ended=True)
-    #         logger.info("League has ended.")
-    #         # distribute prizes
-    #         winners = sorted(participants, key=lambda x: x.total_points, reverse=True)[
-    #             :3
-    #         ]
-    #         await pay_rewards_overall(league.id, winners)
-    #     else:
-    #         # Upddate matchday
-    #         matchday = await get_round(
-    #             self.api_key, league.competition_code, league.season, current=False
-    #         )
-    #         logger.debug(f"Matchday: {matchday}")
-    #         # matchday is a list of matchaday strings, check if there's a matchday next to the current one
-    #         # get index of current matchday, add 1 to get next matchday
-    #         next_matchday = matchday[matchday.index(league.matchday) + 1] or matchday[0]
-    #         logger.debug(f"Next matchday: {next_matchday}")
-    #         await update_league(league.id, matchday=next_matchday)
-
-    #         if(league_type == "Cup"):
-    #             is_group_stage = next_matchday.startswith("Group")
-
-
-    #         logger.info("League still running.")
+    
     async def check_competitions(self, league: FantasyLeague):
         # Replace with actual function to check if competitions are over and distribute prizes
         logger.info("Checking competitions and distributing prizes...")
@@ -183,10 +161,15 @@ class FantasyLeagueScheduler:
                 return
             except IndexError:
                 next_matchday = None
-            
+
             if next_matchday:
                 logger.debug(f"Next matchday: {next_matchday}")
-                await update_league(league.id, matchday=next_matchday)
+                first_match = await get_first_match(self.api_key, league.competition_code, league.season, next_matchday)
+                transfer_window_close = datetime.fromtimestamp(first_match, timezone.utc) - timedelta(minutes=90)                
+                window_timestamp = int(transfer_window_close.timestamp())
+
+                await update_league(league.id, matchday=next_matchday, transfer_window_close=window_timestamp)
+                await self.reset_free_transfers(league.id)
 
                 if league_type == "Cup":
                     is_group_stage = next_matchday.startswith("Group")
@@ -196,7 +179,7 @@ class FantasyLeagueScheduler:
                         logger.info("End of group stage reached.")
                         # Distribute group stage rewards
                         group_stage_winner = sorted(participants, key=lambda x: x.total_points, reverse=True)[0]
-                        logger.debug(f"Group stage winner: {group_stage_winner}")
+                        logger.info(f"Group stage winner: {group_stage_winner}")
                         await pay_matchday_reward(league.id, group_stage_winner, "group_stage_winner")
                         # await pay_group_stage_rewards(league.id, group_stage_winners)
                     elif is_group_stage and remaining_group_stages:
@@ -205,16 +188,16 @@ class FantasyLeagueScheduler:
                         pass
                     else:
                         # This is for Cup competitions that are not in the group stage
-                        logger.info("Cup competition outside of group stage.")
+                        logger.debug("Cup competition outside of group stage.")
                         # Distribute regular matchday rewards
                         matchday_winner = sorted(participants, key=lambda x: x.total_points, reverse=True)[0]
-                        logger.debug(f"Matchday winner: {matchday_winner}")
+                        logger.info(f"Matchday winner: {matchday_winner}")
                         await pay_matchday_reward(league.id, matchday_winner, f"{league.matchday} winner")
                         # await pay_matchday_rewards(league.id, matchday_winners)
                 else:
                     # Regular league: Distribute matchday rewards
                     matchday_winner = sorted(participants, key=lambda x: x.total_points, reverse=True)[0]
-                    logger.debug(f"Matchday winner: {matchday_winner}")
+                    logger.info(f"Matchday winner: {matchday_winner}")
                     await pay_matchday_reward(league.id, matchday_winner)
                     # await pay_matchday_rewards(league.id, matchday_winners)
 
@@ -222,8 +205,6 @@ class FantasyLeagueScheduler:
             else:
                 logger.warning("No next matchday found. The league may have completed all known matchdays.")
                 return
-
-            logger.info("League still running.")
 
     async def stop(self):
         self.running = False

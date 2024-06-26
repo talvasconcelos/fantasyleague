@@ -32,6 +32,7 @@ class FantasyLeague(CreateFantasyLeague):
     num_participants: int
     has_ended: bool
     last_updated: int
+    transfer_window_close: Optional[int]
 
     # add a property to get the total prize pool
     @property
@@ -104,3 +105,20 @@ class CreatePrizeDistribution(BaseModel):
 class PrizeDistribution(CreatePrizeDistribution):
     id: str
     distributed_at: int
+
+
+class CreateTransfer(BaseModel):
+    participant_id: str
+    player_out_id: str
+    player_in_id: str
+    gameweek: Optional[str]
+    
+class Transfer(CreateTransfer):
+    id: str
+    cost: int
+    transfer_date: int
+
+class FreeTransfer(BaseModel):
+    participant_id: str
+    free_transfers: int
+    saved_transfers: int

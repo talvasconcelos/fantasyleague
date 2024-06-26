@@ -1,3 +1,4 @@
+import time
 from http import HTTPStatus
 
 from fastapi import APIRouter, Depends, Query
@@ -5,9 +6,13 @@ from fastapi.exceptions import HTTPException
 from lnbits.core.crud import get_user
 from lnbits.core.services import create_invoice
 from lnbits.core.views.api import api_payment
-from lnbits.decorators import WalletTypeInfo, check_admin, require_admin_key
+from lnbits.decorators import (
+    WalletTypeInfo,
+    check_admin,
+    require_admin_key,
+    require_invoice_key,
+)
 from loguru import logger
-from tests import api
 
 from .api_football import (
     get_competitions,
@@ -23,18 +28,22 @@ from .crud import (
     create_players_bulk,
     create_prize_distribution,
     create_settings,
+    create_transfer,
     delete_league,
     get_active_leagues,
+    get_free_transfers,
     get_league,
     get_leagues,
     get_participant,
     get_participant_by_wallet,
+    get_participant_team,
     get_participants,
     get_player,
     get_players,
     get_players_by_league,
     get_prize_distributions,
     get_settings,
+    get_transfers_participant,
     update_league,
     update_league_players,
     update_participant_formation,
@@ -46,6 +55,7 @@ from .models import (
     CreateFantasyLeague,
     CreateParticipant,
     CreatePlayer,
+    CreateTransfer,
     FantasyLeague,
     LineUp,
     Participant,
@@ -213,6 +223,18 @@ async def api_delete_league(
 
 
 ## PARTICIPANTS
+
+@fantasyleague_ext_api.get("/participant/{participant_id}", description="Get a participant")
+async def api_get_participant(participant_id: str, wallet: WalletTypeInfo = Depends(require_admin_key)):
+    participant = await get_participant(participant_id)
+    if not participant:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND, detail="Participant not found."
+        )
+    if participant.wallet != wallet.wallet.id:
+        raise HTTPException(status_code=HTTPStatus.FORBIDDEN, detail="Unauthorized.")
+    
+    return participant.dict()
 
 
 @fantasyleague_ext_api.get(
@@ -416,3 +438,47 @@ async def api_update_league_players(
     # ]
     await update_league_players(league_id, PlayersBulk(players=players))
     return {"message": "Players updated."}
+
+
+## TRANSFERS
+
+@fantasyleague_ext_api.get('/transfers/{participant_id}', description='Get all transfers')
+async def api_get_transfers(participant_id: str, wallet: WalletTypeInfo = Depends(require_invoice_key)):
+    participant = await get_participant(participant_id)
+    if not participant:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND, detail="Participant not found."
+        )
+    if participant.wallet != wallet.wallet.id:
+        raise HTTPException(status_code=HTTPStatus.FORBIDDEN, detail="Unauthorized.")
+    
+    transfers = await get_transfers_participant(participant_id)
+    return transfers
+
+@fantasyleague_ext_api.post('/transfers', description='Create a new transfer')
+async def api_create_transfer(data: CreateTransfer, wallet: WalletTypeInfo = Depends(require_admin_key)):
+    participant = await get_participant(data.participant_id)
+    if not participant:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND, detail="Participant not found."
+        )
+    if participant.wallet != wallet.wallet.id:
+        raise HTTPException(status_code=HTTPStatus.FORBIDDEN, detail="Unauthorized.")
+    
+    league = await get_league(participant.fantasyleague_id)
+    assert league, "League not found."
+
+    if league.transfer_window_close < int(time.time()):
+        raise HTTPException(
+            status_code=HTTPStatus.BAD_REQUEST, detail="Transfer window closed."
+        )
+    free_transfers = await get_free_transfers(participant.id)
+    # if free_transfers.free_transfers < 1:
+    #     raise HTTPException(
+    #         status_code=HTTPStatus.BAD_REQUEST, detail="No free transfers available."
+    #     )
+    
+    data.gameweek = league.matchday
+    transfer = await create_transfer(data, free_transfers.free_transfers)
+    
+    return transfer.dict()

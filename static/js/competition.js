@@ -86,7 +86,45 @@ const competitionPage = async () => {
             descending: true,
             rowsNumber: 10
           }
-        }
+        },
+        playerOut: null,
+        playerIn: null,
+        transfers: [],
+        transferColumns: [
+          {label: 'ID', align: 'left', field: 'id'},
+          {
+            label: 'Player Out',
+            align: 'left',
+            field: 'player_out_id',
+            format: (val, row) => `${state.players.find(p => p.id == val).name}`
+          },
+          {
+            label: 'Player In',
+            align: 'left',
+            field: 'player_in_id',
+            format: (val, row) => `${state.players.find(p => p.id == val).name}`
+          },
+          {
+            name: 'gameweek',
+            label: 'Matchday',
+            align: 'left',
+            field: 'gameweek',
+            sortable: true
+          },
+          {name: 'cost', label: 'Cost', align: 'left', field: 'cost'},
+          {
+            name: 'transfer_date',
+            label: 'Date',
+            align: 'left',
+            field: 'transfer_date',
+            sortable: true,
+            format: val =>
+              Quasar.utils.date.formatDate(
+                new Date(val * 1000),
+                'YYYY-MM-DD HH:mm'
+              )
+          }
+        ]
       }
     },
     watch: {},
@@ -114,6 +152,20 @@ const competitionPage = async () => {
       },
       subs() {
         return state.subs
+      },
+      transferWindowOpen() {
+        return Date.now() < new Date(transferWindow)
+      },
+      transferPlayersList() {
+        if (!this.playerOut)
+          return state.players
+            .filter(player => !state.team.find(p => p.id === player.id))
+            .sort((a, b) => b.points - a.points)
+        return state.players
+          .filter(player => !state.team.find(p => p.id === player.id))
+          .filter(player => player.position == this.playerOut.position)
+          .filter(player => player.id !== this.playerOut.id)
+          .sort((a, b) => b.points - a.points)
       }
     },
     methods: {
@@ -123,6 +175,22 @@ const competitionPage = async () => {
           `/fantasyleague/api/v1/competition/${state.participant.fantasyleague_id}/players`
         )
         state.updateState('players', [...data])
+      },
+      async getParticipant() {
+        try {
+          const wallet = _.findWhere(this.g.user.wallets, {
+            id: state.participant.wallet
+          })
+          const {data} = await LNbits.api.request(
+            'GET',
+            `/fantasyleague/api/v1/participant/${state.participant.id}`,
+            wallet.adminkey
+          )
+          state.updateState('participant', data)
+          state.updateState('lineUp', data.lineup.split(','))
+        } catch (error) {
+          LNbits.utils.notifyApiError(error)
+        }
       },
       pickRandomTeam() {
         // pick 15 random players (2 goalkeepers, 5 defenders, 5 midfielders, 3 attackers)
@@ -249,7 +317,84 @@ const competitionPage = async () => {
             })
           }
         } catch (error) {
+          LNbits.utils.notifyApiError(error)
+        }
+      },
+      selectPlayerOut(player = null) {
+        if (this.playerOut && this.playerOut.id === player.id) {
+          this.playerOut = null
+          return
+        }
+        this.playerOut = player
+      },
+      selectPlayerIn(player = null) {
+        if (this.playerIn && this.playerIn.id === player.id) {
+          this.playerIn = null
+          return
+        }
+        this.playerIn = player
+      },
+      async getTransfers() {
+        try {
+          const wallet = _.findWhere(this.g.user.wallets, {
+            id: state.participant.wallet
+          })
+          const {data} = await LNbits.api.request(
+            'GET',
+            `/fantasyleague/api/v1/transfers/${state.participant.id}`,
+            wallet.inkey
+          )
+          this.transfers = data
+        } catch (error) {
           console.log(error)
+        }
+      },
+      confirmTransfer() {
+        this.$q
+          .dialog({
+            title: 'Transfer Confirmation',
+            message: `Transfer <b>${this.playerOut.name}</b> for <b>${this.playerIn.name}</b>? <br> Please note that you can only make <b>1 free transfer per matchday</b>, additional transfers will cost you <b>4 points each</b>!`,
+            cancel: true,
+            html: true
+          })
+          .onOk(() => this.createTransfer())
+          .onCancel(() => {
+            this.playerOut = null
+            this.playerIn = null
+          })
+      },
+      async createTransfer() {
+        if (this.playerIn == null || this.playerOut == null) return
+        try {
+          const wallet = _.findWhere(this.g.user.wallets, {
+            id: state.participant.wallet
+          })
+          const {data} = await LNbits.api.request(
+            'POST',
+            `/fantasyleague/api/v1/transfers`,
+            wallet.adminkey,
+            {
+              participant_id: state.participant.id,
+              player_out_id: this.playerOut.id,
+              player_in_id: this.playerIn.id
+            }
+          )
+
+          const teamMap = new Map(state.team.map(player => [player.id, player]))
+          teamMap.delete(this.playerOut.id)
+          teamMap.set(this.playerIn.id, this.playerIn)
+          state.updateState('team', [...teamMap.values()])
+          this.playerOut = null
+          this.playerIn = null
+          this.transfers = [...this.transfers, data]
+          this.$q.notify({
+            message: 'Transfer successful',
+            color: 'positive',
+            position: 'bottom'
+          })
+          await this.getParticipant()
+        } catch (error) {
+          LNbits.utils.notifyApiError(error)
         }
       }
     },
@@ -267,6 +412,13 @@ const competitionPage = async () => {
         state.hasTeam = true
       }
 
+      // console.log(
+      //   transferWindow,
+      //   new Date(transferWindow),
+      //   Date.now() > new Date(transferWindow)
+      // )
+      // console.log('team', team)
+
       // const unsubscribe = state.subscribe(newState => {
       //   //console.log('State changed:', newState)
       //   // this.$forceUpdate()
@@ -275,6 +427,7 @@ const competitionPage = async () => {
       this.leaderBoard = board.sort((a, b) => b.total_points - a.total_points)
 
       await this.getLeaguePlayers()
+      await this.getTransfers()
     }
   })
 }

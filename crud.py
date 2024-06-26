@@ -9,7 +9,9 @@ from .models import (
     CreateFantasyLeague,
     CreateParticipant,
     CreatePrizeDistribution,
+    CreateTransfer,
     FantasyLeague,
+    FreeTransfer,
     LineUp,
     Participant,
     Player,
@@ -17,6 +19,7 @@ from .models import (
     PlayersBulk,
     PrizeDistribution,
     Settings,
+    Transfer,
 )
 
 ## SETTINGS
@@ -396,3 +399,84 @@ async def get_prize_distributions(league_id: str):
         (league_id,),
     )
     return [PrizeDistribution(**row) for row in rows]
+
+## TRANSFERS
+async def update_transfer_window(league_id: str, timestamp: int):
+    await db.execute(
+        "UPDATE fantasyleague.competitions SET transfer_window_close = ? WHERE id = ?",
+        (timestamp, league_id),
+    )
+    return
+
+async def get_transfers_participant(participant_id: str):
+    rows = await db.fetchall(
+        "SELECT * FROM fantasyleague.participant_transfers WHERE participant_id = ?", (participant_id,)
+    )
+    return [Transfer(**row) for row in rows]
+
+async def get_transfer(transfer_id: str):
+    row = await db.fetchone(
+        "SELECT * FROM fantasyleague.participant_transfers WHERE id = ?", (transfer_id,)
+    )
+    return Transfer(**row) if row else None
+
+async def create_transfer(data: CreateTransfer, free_transfers: int, saved_transfers: int = 0):
+    participant = await get_participant(data.participant_id)
+    cost = 0
+    if free_transfers > 0:
+        await update_free_transfers(data.participant_id, free_transfers - 1, saved_transfers)
+    else:
+        cost = 4
+        await update_participant_points(data.participant_id, -cost)
+        
+    transfer_id = urlsafe_short_hash()
+
+    await db.execute(
+        """
+        INSERT INTO fantasyleague.participant_transfers (id, participant_id, player_out_id, player_in_id, gameweek, cost)
+        VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        (transfer_id, data.participant_id, data.player_out_id, data.player_in_id, data.gameweek, cost),
+    )
+
+    #replace new player with old player
+    await db.execute(
+        """
+        UPDATE fantasyleague.participant_players SET player_id = ? WHERE participant_id = ? AND player_id = ?
+        """,
+        (data.player_in_id, data.participant_id, data.player_out_id),
+    )
+
+    # replace player in lineup
+    lineup = participant.lineup.split(",")
+    lineup[lineup.index(data.player_out_id)] = data.player_in_id
+    await update_participant_lineup(data.participant_id, LineUp(lineup=lineup))
+    
+    return await get_transfer(transfer_id)
+
+async def update_free_transfers(participant_id: str, free_transfers: int, saved_transfers: int):
+    await db.execute(
+        "UPDATE fantasyleague.participant_free_transfers SET free_transfers = ?, saved_transfers = ? WHERE participant_id = ?",
+        (free_transfers, saved_transfers, participant_id),
+    )
+    return
+
+async def get_free_transfers(participant_id: str):
+    row = await db.fetchone(
+        "SELECT * FROM fantasyleague.participant_free_transfers WHERE participant_id = ?", (participant_id,)
+    )
+    return FreeTransfer(**row) if row else None
+
+async def get_free_transfers_participants(participants: List[str]):
+    q = ",".join(["?"] * len(participants))
+    rows = await db.fetchall(
+        f"SELECT * FROM fantasyleague.participant_free_transfers WHERE participant_id IN ({q})", (*participants,)
+    )
+    return [FreeTransfer(**row) for row in rows]
+
+async def reset_free_transfers(participant_id: str):
+    await db.execute(
+        "UPDATE fantasyleague.participant_free_transfers SET free_transfers = 1, saved_transfers = 0 WHERE participant_id = ?",
+        (participant_id,),
+    )
+    return

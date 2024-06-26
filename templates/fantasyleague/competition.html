@@ -45,7 +45,8 @@
                         ><span v-text="player.name"></span
                       ></q-item-label>
                       <q-item-label caption
-                        ><span v-text="player.position"></span
+                        ><span v-text="player.position"></span> -
+                        <span v-text="player.team"></span
                       ></q-item-label>
                     </q-item-section>
                     <q-item-section side top>
@@ -123,7 +124,96 @@
         </q-tab-panel>
         <!-- TRANSFERS -->
         <q-tab-panel name="transfers">
-          <div class="text-h6">Coming soon...</div>
+          <div>
+            <q-card-section class="q-mb-md">
+              <q-table
+                title="My Transfers"
+                :data="transfers"
+                :columns="transferColumns"
+                row-key="name"
+              ></q-table>
+            </q-card-section>
+            <q-separator></q-separator>
+            <template v-if="transferWindowOpen">
+              <q-card-section>
+                <div>
+                  <q-btn
+                    :disable="playerOut == null && playerIn == null"
+                    color="primary"
+                    label="Make Transfer"
+                    @click="confirmTransfer"
+                    class="q-mt-md"
+                  ></q-btn>
+                </div>
+              </q-card-section>
+              <q-card-section class="row">
+                <q-list class="col-12 col-md-6">
+                  <q-item
+                    clickable
+                    v-ripple
+                    v-for="player in state.team"
+                    :key="player.id"
+                    :dense="$q.screen.lt.md"
+                    @click="selectPlayerOut(player)"
+                    :active="playerOut && player.id == playerOut.id"
+                    active-class="bg-red-2"
+                  >
+                    <q-item-section top avatar>
+                      <q-avatar round>
+                        <img :src="player.photo" />
+                      </q-avatar>
+                    </q-item-section>
+                    <q-item-section>
+                      <q-item-label
+                        ><span v-text="player.name"></span
+                      ></q-item-label>
+                      <q-item-label caption
+                        ><span v-text="player.position"></span> -
+                        <span v-text="player.team"></span
+                      ></q-item-label>
+                    </q-item-section>
+                    <q-item-section side top>
+                      <q-badge :label="player.points"></q-badge>
+                    </q-item-section>
+                  </q-item>
+                </q-list>
+                <q-virtual-scroll
+                  class="col-12 col-md-6"
+                  :style="`max-height:${$q.screen.lt.md ? '660' : '840'}px`"
+                  :items="Object.freeze(transferPlayersList)"
+                  separator
+                >
+                  <template v-slot="{ item, index }">
+                    <q-item
+                      :key="index"
+                      clickable
+                      v-ripple
+                      :dense="$q.screen.lt.md"
+                      @click="selectPlayerIn(item)"
+                      :active="playerIn && item.id == playerIn.id"
+                      active-class="bg-green-2"
+                    >
+                      <q-item-section>
+                        <q-item-label
+                          ><span v-text="item.name"></span
+                        ></q-item-label>
+                        <q-item-label caption
+                          ><span v-text="item.position"></span> -
+                          <span v-text="item.team"></span
+                        ></q-item-label>
+                      </q-item-section>
+                      <q-item-section side top>
+                        <q-badge :label="item.points"></q-badge>
+                      </q-item-section>
+                    </q-item>
+                  </template>
+                </q-virtual-scroll>
+              </q-card-section>
+            </template>
+            <div v-else class="text-h6">
+              Transfer window closed for the current matchday
+            </div>
+          </div>
         </q-tab-panel>
         <!-- LEADER BOARD -->
         <q-tab-panel name="board">
@@ -200,6 +290,7 @@
   const participant = JSON.parse('{{ participant | tojson }}')
   const board = JSON.parse('{{ board | tojson }}')
   const team = JSON.parse('{{ team | tojson }}')
+  const transferWindow = parseInt('{{ transfer_window }}') * 1000
 </script>
 <script src="{{ url_for('fantasyleague_static', path='js/utils.js') }}"></script>
 
@@ -268,7 +359,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 75px;
+    width: 50px;
     min-height: 90px;
     margin-right: 6px;
   }
@@ -297,7 +388,7 @@
     justify-content: center;
     align-items: center;
   }
-  @media (min-width: 600px) {
+  @media (min-width: 500px) {
     .pitch-wrapper {
       display: grid;
       grid-template-rows: auto 1fr auto;

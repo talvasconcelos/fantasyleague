@@ -1,3 +1,6 @@
+def calculate_transfer_window():
+    pass
+
 def calculate_player_points(player_data):
     points = {}
 
@@ -65,7 +68,6 @@ def _calculate_points_for_saves(player_data, points):
         stats = player_entry["statistics"][0]
         if stats["games"]["position"] == "G":  # Check if the player is a goalkeeper
             points[player_id] += stats["goals"]["saves"] or 0
-
 
 # Example usage
 data = [
