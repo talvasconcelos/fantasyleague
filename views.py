@@ -26,6 +26,7 @@ async def index(
 ):
     competitions = await get_active_leagues()
     wallet_ids = [wallet.id for wallet in user.wallets]
+    logger.debug(f"Competitions: {competitions}")
     user_competitions = await get_participant_competitions(wallet_ids)
     logger.debug(f"User competitions: {user_competitions}")
     return template_renderer(["fantasyleague/templates"]).TemplateResponse(

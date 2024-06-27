@@ -76,7 +76,7 @@ async def m001_initial(db):
 
     await db.execute(
         f"""
-        CREATE TABLE prize_distributions (
+        CREATE TABLE fantasyleague.prize_distributions (
             id {db.serial_primary_key},
             league_id TEXT,
             participant_id TEXT,
@@ -124,3 +124,19 @@ async def m003_initiate_free_transfers(db):
             """,
             (participant["id"],),
         )
+
+async def m004_fix_prizes(db):
+    await db.execute(
+        f"""
+        CREATE TABLE fantasyleague.prize_distributions (
+            id {db.serial_primary_key},
+            league_id TEXT,
+            participant_id TEXT,
+            prize_type TEXT,
+            prize_amount INTEGER,
+            distributed_at TIMESTAMP NOT NULL DEFAULT {db.timestamp_now}
+        );
+        """
+    )
+
+    await db.execute("DROP TABLE prize_distributions;")

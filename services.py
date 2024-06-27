@@ -36,7 +36,7 @@ async def pay_rewards_overall(league_id: str, winners: List[Participant]):
         league.first_place and league.second_place and league.third_place
     ), "Prize distribution not set"
 
-    total_pool, = league.prize_distribution
+    total_pool, _ = league.prize_distribution
 
     for idx, winner in enumerate(winners):
         amount = 0
