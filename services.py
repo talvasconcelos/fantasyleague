@@ -7,13 +7,13 @@ from .crud import create_prize_distribution, get_league, get_participant_by_wall
 from .models import CreatePrizeDistribution, Participant
 
 
-async def create_internal_payment(league_id, league_wallet, user_wallet, amount):
+async def create_internal_payment(league_id, league_wallet, user_wallet, amount, memo = None):
     try:
         _, payment_request = await create_invoice(
             wallet_id=user_wallet,
             amount=amount,
             internal=True,
-            memo="Fantasy League Reward",
+            memo="Fantasy League Reward" if not memo else memo,
         )
 
         await pay_invoice(
@@ -51,7 +51,7 @@ async def pay_rewards_overall(league_id: str, winners: List[Participant]):
             amount = int(total_pool * league.third_place)
             prize = "third_place"
 
-        await create_internal_payment(league.id, league.wallet, winner.wallet, amount)
+        await create_internal_payment(league.id, league.wallet, winner.wallet, amount, prize)
         await create_prize_distribution(
             CreatePrizeDistribution(
                 league_id=league_id,
@@ -70,7 +70,7 @@ async def pay_matchday_reward(league_id: str, winner: Participant, reward_type: 
     _, total_matchday = league.prize_distribution
     amount = int(total_matchday * league.matchday_winner)
 
-    await create_internal_payment(league.id, league.wallet, winner.wallet, amount)
+    await create_internal_payment(league.id, league.wallet, winner.wallet, amount, reward_type)
     await create_prize_distribution(
             CreatePrizeDistribution(
                 league_id=league_id,

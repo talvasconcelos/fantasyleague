@@ -168,7 +168,7 @@ async def get_first_match(api_key: str, competition_code: str, season: int, matc
         r = response.json()
 
         # Get the start time of the first fixture
-        first_fixture = min(r["response"], key=lambda x: x['fixture']['timestamp'])
+        first_fixture = min(r["response"], key=lambda x: x['fixture']['timestamp'], default=r["response"][0]["fixture"]["timestamp"])
         first_fixture_start = int(first_fixture['fixture']['timestamp'])
 
         return first_fixture_start
