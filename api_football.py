@@ -21,9 +21,9 @@ def _get_headers(api_key: str):
 def _get_sleep_time(response: httpx.Response):
     rate_limit = int(response.headers.get("X-RateLimit-Limit", 10))
     remaining = int(response.headers.get("X-RateLimit-Remaining", 0))
-    r = response.json()
-    if r["paging"]["total"] < 6 and remaining > 0:
-        return 0
+    # r = response.json()
+    # if r["paging"]["total"] < 6 and remaining > 0:
+    #     return 0
     
     if remaining == 0:
         cool_off_seconds = 60  # Cool off for one minute
@@ -166,6 +166,7 @@ async def get_first_match(api_key: str, competition_code: str, season: int, matc
             f"fixtures?league={competition_code}&season={season}&round={matchday}"
         )
         r = response.json()
+        logger.info(r)
 
         # Get the start time of the first fixture
         first_fixture = min(r["response"], key=lambda x: x['fixture']['timestamp'], default=r["response"][0]["fixture"]["timestamp"])

@@ -149,7 +149,7 @@ class FantasyLeagueScheduler:
         else:
             # Update matchday
             matchday = await get_round(self.api_key, league.competition_code, league.season, current=False)
-            logger.debug(f"Matchday: {matchday}")
+            logger.info(f"Matchday: {matchday}")
             
             # matchday is a list of matchday strings, check if there's a matchday next to the current one
             try:
@@ -163,7 +163,7 @@ class FantasyLeagueScheduler:
                 next_matchday = None
 
             if next_matchday:
-                logger.debug(f"Next matchday: {next_matchday}")
+                logger.info(f"Next matchday: {next_matchday}")
                 first_match = await get_first_match(self.api_key, league.competition_code, league.season, next_matchday)
                 transfer_window_close = datetime.fromtimestamp(first_match, timezone.utc) - timedelta(minutes=90)                
                 window_timestamp = int(transfer_window_close.timestamp())
